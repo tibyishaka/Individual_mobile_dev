@@ -32,24 +32,50 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Kigali is the capital and largest city of Rwanda. '
-              'Known as the "City of a Thousand Hills", it is one of Africa\'s '
-              'cleanest and most vibrant cities. With its lush green landscapes, '
-              'rich culture, and warm hospitality, Kigali offers a unique blend '
-              'of tradition and modernity.',
-              style: TextStyle(fontSize: 16, height: 1.5),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                'assets/images/kigali-Rwanda.jpg',
+                width: double.infinity,
+                height: 200,
+                fit: BoxFit.cover,
+              ),
             ),
             const SizedBox(height: 24),
-            _buildCategoryButton(context, 'Health', Icons.local_hospital, Colors.red),
+            _buildCategoryButton(
+              context,
+              'Health',
+              Icons.local_hospital,
+              Colors.red,
+            ),
             const SizedBox(height: 12),
-            _buildCategoryButton(context, 'Government', Icons.account_balance, Colors.blue),
+            _buildCategoryButton(
+              context,
+              'Government',
+              Icons.account_balance,
+              Colors.blue,
+            ),
             const SizedBox(height: 12),
-            _buildCategoryButton(context, 'Entertainment', Icons.movie, Colors.purple),
+            _buildCategoryButton(
+              context,
+              'Entertainment',
+              Icons.movie,
+              Colors.purple,
+            ),
             const SizedBox(height: 12),
-            _buildCategoryButton(context, 'Education', Icons.school, Colors.orange),
+            _buildCategoryButton(
+              context,
+              'Education',
+              Icons.school,
+              Colors.orange,
+            ),
             const SizedBox(height: 12),
-            _buildCategoryButton(context, 'Tourist Attraction', Icons.tour, Colors.green),
+            _buildCategoryButton(
+              context,
+              'Tourist Attraction',
+              Icons.tour,
+              Colors.green,
+            ),
           ],
         ),
       ),
@@ -57,7 +83,11 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildCategoryButton(
-      BuildContext context, String title, IconData icon, Color color) {
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color color,
+  ) {
     return SizedBox(
       width: double.infinity,
       height: 56,
