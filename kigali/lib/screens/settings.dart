@@ -23,6 +23,20 @@ class SettingsScreen extends StatelessWidget {
           _ThemeTile(settings: settings, theme: theme),
           const Divider(height: 1, indent: 16, endIndent: 16),
 
+          // ── Notifications Section ──
+          _SectionHeader(title: 'Notifications', theme: theme),
+          SwitchListTile(
+            secondary: Icon(
+              Icons.notifications_outlined,
+              color: theme.colorScheme.primary,
+            ),
+            title: const Text('Notifications'),
+            subtitle: const Text('Enable push notifications'),
+            value: settings.notificationsEnabled,
+            onChanged: (value) => settings.setNotificationsEnabled(value),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+
           // ── Language Section ──
           _SectionHeader(title: 'Language', theme: theme),
           _LanguageTile(settings: settings, theme: theme),
@@ -39,6 +53,22 @@ class SettingsScreen extends StatelessWidget {
             subtitle: const Text('Allow the app to access device location'),
             value: settings.useLocation,
             onChanged: (value) => settings.setUseLocation(value),
+          ),
+          SwitchListTile(
+            secondary: Icon(
+              Icons.notifications_active_outlined,
+              color: settings.useLocation
+                  ? theme.colorScheme.primary
+                  : theme.disabledColor,
+            ),
+            title: const Text('Location Notifications'),
+            subtitle: const Text(
+              'Receive notifications based on your location',
+            ),
+            value: settings.locationNotifications,
+            onChanged: settings.useLocation && settings.notificationsEnabled
+                ? (value) => settings.setLocationNotifications(value)
+                : null,
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
 

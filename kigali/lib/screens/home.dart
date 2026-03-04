@@ -1,9 +1,49 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'settings.dart';
 import 'category.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  static const _images = [
+    'assets/images/kigali-Rwanda.jpg',
+    'assets/images/Kigali.jpg',
+    'assets/images/Kigali-Rwa.jpg',
+    'assets/images/Kigali, Rwanda.jpg',
+    'assets/images/Kigal.jpg',
+    'assets/images/Kiga.jpg',
+  ];
+
+  late final PageController _pageController;
+  Timer? _timer;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      _currentPage++;
+      _pageController.animateToPage(
+        _currentPage,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +74,43 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Image.asset(
-                'assets/images/kigali-Rwanda.jpg',
-                width: double.infinity,
+              child: SizedBox(
                 height: 200,
-                fit: BoxFit.cover,
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() => _currentPage = index);
+                  },
+                  itemBuilder: (context, index) {
+                    final imageIndex = index % _images.length;
+                    return Image.asset(
+                      _images[imageIndex],
+                      width: double.infinity,
+                      height: 200,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                ),
               ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(_images.length, (index) {
+                final isActive = (_currentPage % _images.length) == index;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: isActive ? 20 : 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                );
+              }),
             ),
             const SizedBox(height: 24),
             _buildCategoryButton(
