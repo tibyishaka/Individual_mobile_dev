@@ -3,28 +3,8 @@ import '../models/listing.dart';
 import '../providers/listings_provider.dart';
 import 'listing_form.dart';
 
-class MyListingScreen extends StatefulWidget {
-  const MyListingScreen({super.key});
-
-  @override
-  State<MyListingScreen> createState() => _MyListingScreenState();
-}
-
-class _MyListingScreenState extends State<MyListingScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+class DirectoryScreen extends StatelessWidget {
+  const DirectoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,31 +12,12 @@ class _MyListingScreenState extends State<MyListingScreen>
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Listings'),
-        centerTitle: true,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'All Listings'),
-            Tab(text: 'My Listings'),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ListingFormScreen()),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
+      appBar: AppBar(title: const Text('Directory'), centerTitle: true),
       body: Column(
         children: [
           // Search bar
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: TextField(
               decoration: InputDecoration(
                 hintText: 'Search by name...',
@@ -75,126 +36,55 @@ class _MyListingScreenState extends State<MyListingScreen>
             ),
           ),
 
-          // Category filter buttons (Home-tab style)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+          // Category filter chips
+          SizedBox(
+            height: 48,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
-                _buildCategoryButton(
-                  context,
-                  'All',
-                  Icons.apps,
-                  Colors.grey,
-                  provider,
-                  null,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FilterChip(
+                    label: const Text('All'),
+                    selected: provider.selectedCategory == null,
+                    onSelected: (_) => provider.setCategory(null),
+                  ),
                 ),
-                _buildCategoryButton(
-                  context,
-                  'Health',
-                  Icons.local_hospital,
-                  Colors.red,
-                  provider,
-                  'Health',
-                ),
-                _buildCategoryButton(
-                  context,
-                  'Government',
-                  Icons.account_balance,
-                  Colors.blue,
-                  provider,
-                  'Government',
-                ),
-                _buildCategoryButton(
-                  context,
-                  'Entertainment',
-                  Icons.movie,
-                  Colors.purple,
-                  provider,
-                  'Entertainment',
-                ),
-                _buildCategoryButton(
-                  context,
-                  'Education',
-                  Icons.school,
-                  Colors.orange,
-                  provider,
-                  'Education',
-                ),
-                _buildCategoryButton(
-                  context,
-                  'Tourist Attraction',
-                  Icons.tour,
-                  Colors.green,
-                  provider,
-                  'Tourist Attraction',
-                ),
+                ...Listing.categories.map((cat) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: FilterChip(
+                      label: Text(cat),
+                      selected: provider.selectedCategory == cat,
+                      onSelected: (_) => provider.setCategory(
+                        provider.selectedCategory == cat ? null : cat,
+                      ),
+                    ),
+                  );
+                }),
               ],
             ),
           ),
 
           const SizedBox(height: 4),
 
-          // Tab content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _AllListingsTab(provider: provider, theme: theme),
-                _MyListingsTab(provider: provider, theme: theme),
-              ],
-            ),
-          ),
+          // Listings
+          Expanded(child: _buildBody(context, provider, theme)),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryButton(
+  Widget _buildBody(
     BuildContext context,
-    String label,
-    IconData icon,
-    Color color,
     ListingsProvider provider,
-    String? category,
+    ThemeData theme,
   ) {
-    final isSelected = provider.selectedCategory == category;
-    return SizedBox(
-      height: 40,
-      child: ElevatedButton.icon(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isSelected ? color : color.withAlpha(40),
-          foregroundColor: isSelected ? Colors.white : color,
-          elevation: isSelected ? 2 : 0,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        icon: Icon(icon, size: 18),
-        label: Text(label, style: const TextStyle(fontSize: 13)),
-        onPressed: () {
-          provider.setCategory(
-            provider.selectedCategory == category ? null : category,
-          );
-        },
-      ),
-    );
-  }
-}
-
-// ── All Listings Tab ──
-class _AllListingsTab extends StatelessWidget {
-  final ListingsProvider provider;
-  final ThemeData theme;
-  const _AllListingsTab({required this.provider, required this.theme});
-
-  @override
-  Widget build(BuildContext context) {
     if (provider.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+
     if (provider.error != null) {
       return Center(
         child: Column(
@@ -247,60 +137,6 @@ class _AllListingsTab extends StatelessWidget {
   }
 }
 
-// ── My Listings Tab ──
-class _MyListingsTab extends StatelessWidget {
-  final ListingsProvider provider;
-  final ThemeData theme;
-  const _MyListingsTab({required this.provider, required this.theme});
-
-  @override
-  Widget build(BuildContext context) {
-    final myListings = provider.listings
-        .where((l) => provider.isOwner(l))
-        .toList();
-
-    if (myListings.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.list_alt,
-              size: 48,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'You haven\'t created any listings yet',
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ListingFormScreen()),
-                );
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Create Listing'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      itemCount: myListings.length,
-      itemBuilder: (context, index) {
-        return _ListingCard(listing: myListings[index], provider: provider);
-      },
-    );
-  }
-}
-
-// ── Shared listing card ──
 class _ListingCard extends StatelessWidget {
   final Listing listing;
   final ListingsProvider provider;
@@ -554,14 +390,18 @@ class _ListingCard extends StatelessWidget {
 
   IconData _categoryIcon(String category) {
     switch (category) {
-      case 'Health':
+      case 'Hospital':
         return Icons.local_hospital;
-      case 'Government':
-        return Icons.account_balance;
-      case 'Entertainment':
-        return Icons.movie;
-      case 'Education':
-        return Icons.school;
+      case 'Police Station':
+        return Icons.local_police;
+      case 'Library':
+        return Icons.local_library;
+      case 'Restaurant':
+        return Icons.restaurant;
+      case 'Café':
+        return Icons.local_cafe;
+      case 'Park':
+        return Icons.park;
       case 'Tourist Attraction':
         return Icons.tour;
       default:

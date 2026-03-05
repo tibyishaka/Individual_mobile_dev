@@ -46,7 +46,7 @@ class _MainNavigationState extends State<MainNavigation> {
           NavigationDestination(
             icon: Icon(Icons.list_alt_outlined),
             selectedIcon: Icon(Icons.list_alt),
-            label: 'My Listing',
+            label: 'Listings',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
