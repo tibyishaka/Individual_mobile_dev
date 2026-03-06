@@ -9,22 +9,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:kigali/main.dart';
+import 'package:kigali/providers/listings_provider.dart';
+import 'package:kigali/providers/settings_provider.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('App smoke test', (WidgetTester tester) async {
+    // MyApp requires pre-built providers since Firebase init happens in main().
+    // This test just verifies the widget tree constructs without crashing.
+    final settings = SettingsProvider();
+    final listings = ListingsProvider();
+    await tester.pumpWidget(
+      MyApp(settingsProvider: settings, listingsProvider: listings),
+    );
+    // Basic sanity: app renders at least one widget
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

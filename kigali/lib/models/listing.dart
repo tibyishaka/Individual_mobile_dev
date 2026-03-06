@@ -12,6 +12,7 @@ class Listing {
   final String createdBy;
   final DateTime timestamp;
   final String? imageUrl;
+  final String? subcategory;
 
   const Listing({
     this.id,
@@ -25,6 +26,7 @@ class Listing {
     required this.createdBy,
     required this.timestamp,
     this.imageUrl,
+    this.subcategory,
   });
 
   Map<String, dynamic> toMap() {
@@ -39,6 +41,7 @@ class Listing {
       'createdBy': createdBy,
       'timestamp': Timestamp.fromDate(timestamp),
       if (imageUrl != null) 'imageUrl': imageUrl,
+      if (subcategory != null) 'subcategory': subcategory,
     };
   }
 
@@ -56,6 +59,7 @@ class Listing {
       createdBy: data['createdBy'] as String? ?? '',
       timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       imageUrl: data['imageUrl'] as String?,
+      subcategory: data['subcategory'] as String?,
     );
   }
 
@@ -71,6 +75,7 @@ class Listing {
     String? createdBy,
     DateTime? timestamp,
     String? imageUrl,
+    String? subcategory,
   }) {
     return Listing(
       id: id ?? this.id,
@@ -84,6 +89,7 @@ class Listing {
       createdBy: createdBy ?? this.createdBy,
       timestamp: timestamp ?? this.timestamp,
       imageUrl: imageUrl ?? this.imageUrl,
+      subcategory: subcategory ?? this.subcategory,
     );
   }
 
@@ -94,4 +100,51 @@ class Listing {
     'Education',
     'Tourist Attraction',
   ];
+
+  static const Map<String, List<String>> subcategories = {
+    'Health': [
+      'Hospitals',
+      'Clinics',
+      'Pharmacies',
+      'Polyclinics',
+      'Dispensaries',
+      'Specialized Clinics',
+      'Health Insurance Offices',
+    ],
+    'Government': [
+      'District Offices',
+      'Province Offices',
+      'Sector Offices',
+      'Cell Offices',
+      'Village Offices',
+      'Police Stations',
+      'RIB Stations',
+      "Ministers' Offices",
+    ],
+    'Entertainment': [
+      'Restaurants',
+      'Cafes',
+      'Hotels',
+      'Lodges',
+      'Stadiums',
+      'Playgrounds',
+      'Cinemas',
+      'Nightlife',
+    ],
+    'Education': [
+      'Schools',
+      'Universities',
+      'Libraries',
+      'Education Centers',
+      'Training Centers',
+    ],
+    'Tourist Attraction': [
+      'Museums',
+      'Genocide Memorials',
+      'Parks',
+      'Cultural Sites',
+      'Viewpoints',
+      'Nature Reserves',
+    ],
+  };
 }

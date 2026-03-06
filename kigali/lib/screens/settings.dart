@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../providers/listings_provider.dart';
 import '../providers/settings_provider.dart';
+import 'sign_in.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -76,23 +77,22 @@ class SettingsScreen extends StatelessWidget {
 
           // ── Account Section ──
           _SectionHeader(title: 'Account', theme: theme),
-          _SettingsTile(
-            icon: Icons.email_outlined,
-            title: 'Email',
-            subtitle: 'johndoe@example.com',
-            theme: theme,
-          ),
-          _SettingsTile(
-            icon: Icons.phone_outlined,
-            title: 'Phone',
-            subtitle: '+250 788 123 456',
-            theme: theme,
-          ),
-          _SettingsTile(
-            icon: Icons.location_on_outlined,
-            title: 'Address',
-            subtitle: 'Kigali, Rwanda',
-            theme: theme,
+          StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.userChanges(),
+            builder: (_, snap) {
+              final email = snap.data?.email ?? '';
+              return ListTile(
+                leading: Icon(
+                  Icons.email_outlined,
+                  color: theme.colorScheme.primary,
+                ),
+                title: const Text('Email'),
+                subtitle: Text(
+                  email.isNotEmpty ? email : '—',
+                  style: theme.textTheme.bodySmall,
+                ),
+              );
+            },
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
 
@@ -116,18 +116,11 @@ class SettingsScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: OutlinedButton.icon(
               onPressed: () async {
-                final auth = FirebaseAuth.instance;
-                await auth.signOut();
-                await auth.signInAnonymously();
-                // Restart listeners with new UID
+                await FirebaseAuth.instance.signOut();
                 if (context.mounted) {
-                  final provider = ListingsScope.of(context);
-                  await provider.ensureAuthenticated();
-                  provider.startListening();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Signed out and refreshed session'),
-                    ),
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const SignInScreen()),
+                    (_) => false,
                   );
                 }
               },
@@ -160,29 +153,34 @@ class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = ListingsScope.of(context);
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withAlpha(120),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            FutureBuilder<String?>(
-              future: provider.getDisplayName(),
-              builder: (context, snap) {
-                final name = snap.data ?? '';
-                final initials = name.trim().isNotEmpty
-                    ? name
-                          .trim()
-                          .split(' ')
-                          .where((w) => w.isNotEmpty)
-                          .take(2)
-                          .map((w) => w[0].toUpperCase())
-                          .join()
-                    : '?';
-                return CircleAvatar(
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.userChanges(),
+      builder: (context, snap) {
+        final user = snap.data;
+        final displayName = user?.displayName ?? '';
+        final email = user?.email ?? '';
+        final initials = displayName.trim().isNotEmpty
+            ? displayName
+                  .trim()
+                  .split(' ')
+                  .where((w) => w.isNotEmpty)
+                  .take(2)
+                  .map((w) => w[0].toUpperCase())
+                  .join()
+            : (email.isNotEmpty ? email[0].toUpperCase() : '?');
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+          color: theme.colorScheme.surfaceContainerHighest.withAlpha(120),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                CircleAvatar(
                   radius: 36,
                   backgroundColor: theme.colorScheme.primaryContainer,
                   child: Text(
@@ -191,64 +189,54 @@ class _ProfileCard extends StatelessWidget {
                       color: theme.colorScheme.onPrimaryContainer,
                     ),
                   ),
-                );
-              },
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: FutureBuilder<String?>(
-                future: provider.getDisplayName(),
-                builder: (context, snap) {
-                  final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-                  final shortUid = uid.length > 8
-                      ? '${uid.substring(0, 8)}…'
-                      : uid;
-                  return Column(
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        snap.data?.isNotEmpty == true
-                            ? snap.data!
-                            : 'Anonymous User',
+                        displayName.isNotEmpty ? displayName : 'No name set',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'UID: $shortUid',
+                        email.isNotEmpty ? email : '—',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
-                  );
-                },
-              ),
-            ),
-            FilledButton.tonal(
-              onPressed: () => _showEditProfileSheet(context, provider),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              ),
-              child: const Text('Edit'),
+                FilledButton.tonal(
+                  onPressed: () =>
+                      _showEditProfileSheet(context, provider, displayName),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Edit'),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  void _showEditProfileSheet(BuildContext context, ListingsProvider provider) {
+  void _showEditProfileSheet(
+    BuildContext context,
+    ListingsProvider provider,
+    String currentName,
+  ) {
     final theme = Theme.of(context);
-    final nameController = TextEditingController();
-    // Pre-fill current name
-    provider.getDisplayName().then((name) {
-      if (name != null) nameController.text = name;
-    });
+    final nameController = TextEditingController(text: currentName);
     bool isSaving = false;
 
     showModalBottomSheet(
@@ -283,9 +271,10 @@ class _ProfileCard extends StatelessWidget {
                   const SizedBox(height: 24),
                   TextField(
                     controller: nameController,
+                    textCapitalization: TextCapitalization.words,
                     decoration: InputDecoration(
                       labelText: 'Display Name',
-                      hintText: 'Your name',
+                      hintText: 'Your full name',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

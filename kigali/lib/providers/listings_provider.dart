@@ -68,11 +68,20 @@ class ListingsProvider extends ChangeNotifier {
         );
   }
 
-  /// Sign in anonymously so the user has a UID for ownership tracking.
+  /// Stop listening to listings and clear state (call on sign-out).
+  void stopListening() {
+    _subscription?.cancel();
+    _subscription = null;
+    _listings = [];
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
+
+  /// Ensures a user is currently signed in. With email/password auth this
+  /// is a no-op — the auth gate in main.dart guarantees the user is logged in.
   Future<void> ensureAuthenticated() async {
-    if (_auth.currentUser == null) {
-      await _auth.signInAnonymously();
-    }
+    // No-op: real auth is handled by the sign-in flow.
   }
 
   /// Create a new listing.
@@ -150,17 +159,20 @@ class ListingsProvider extends ChangeNotifier {
 
   // ── User profile helpers ──
 
-  /// Save display name for the current user.
+  /// Save display name in both Firebase Auth and Firestore.
   Future<void> saveDisplayName(String name) async {
-    await ensureAuthenticated();
+    if (_auth.currentUser == null) return;
+    await _auth.currentUser!.updateDisplayName(name);
     await _firestore.collection('users').doc(currentUserId).set({
       'displayName': name,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
 
-  /// Get display name for the current user from Firestore.
+  /// Get display name — prefers Firebase Auth, falls back to Firestore.
   Future<String?> getDisplayName() async {
+    final authName = _auth.currentUser?.displayName;
+    if (authName != null && authName.isNotEmpty) return authName;
     if (currentUserId == null) return null;
     final doc = await _firestore.collection('users').doc(currentUserId).get();
     return doc.data()?['displayName'] as String?;

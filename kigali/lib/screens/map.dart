@@ -4,8 +4,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import '../models/listing.dart';
 import '../providers/listings_provider.dart';
-import 'category.dart';
 import 'listing_detail.dart';
 
 /// Geographic center of Rwanda
@@ -31,13 +31,15 @@ class _MapScreenState extends State<MapScreen> {
   bool _isFetchingRoute = false;
 
   List<_SearchResult> _suggestions = [];
+  String? _selectedSubcategory;
+  String? _selectedCategoryFilter;
 
   static const _categories = [
-    _Cat('Health', Icons.local_hospital, Colors.red),
-    _Cat('Government', Icons.account_balance, Colors.blue),
-    _Cat('Entertainment', Icons.movie, Colors.purple),
-    _Cat('Education', Icons.school, Colors.orange),
-    _Cat('Tourist', Icons.tour, Colors.green),
+    _Cat('Health', 'Health', Icons.local_hospital, Colors.red),
+    _Cat('Government', 'Government', Icons.account_balance, Colors.blue),
+    _Cat('Entertain.', 'Entertainment', Icons.movie, Colors.purple),
+    _Cat('Education', 'Education', Icons.school, Colors.orange),
+    _Cat('Tourist', 'Tourist Attraction', Icons.tour, Colors.green),
   ];
 
   @override
@@ -297,30 +299,65 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
 
-          // ── Category Buttons Row ──
+          // ── Category Dropdown Buttons ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
             child: Row(
               children: _categories.map((cat) {
+                final subcats = Listing.subcategories[cat.listingKey] ?? [];
+                final isActive = _selectedCategoryFilter == cat.listingKey;
                 return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: _CategoryChip(
-                      cat: cat,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => CategoryScreen(title: cat.label),
-                          ),
-                        );
+                    child: PopupMenuButton<String>(
+                      tooltip: cat.label,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      onSelected: (sub) {
+                        setState(() {
+                          _selectedSubcategory = sub;
+                          _selectedCategoryFilter = cat.listingKey;
+                        });
                       },
+                      itemBuilder: (_) => subcats
+                          .map(
+                            (s) => PopupMenuItem<String>(
+                              value: s,
+                              child: Text(
+                                s,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: cat.color,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      child: _CategoryChip(cat: cat, isActive: isActive),
                     ),
                   ),
                 );
               }).toList(),
             ),
           ),
+
+          // ── Active filter banner ──
+          if (_selectedSubcategory != null)
+            _ActiveFilterBanner(
+              subcategory: _selectedSubcategory!,
+              color: _categories
+                  .firstWhere(
+                    (c) => c.listingKey == _selectedCategoryFilter,
+                    orElse: () => _categories.first,
+                  )
+                  .color,
+              onClear: () => setState(() {
+                _selectedSubcategory = null;
+                _selectedCategoryFilter = null;
+              }),
+            ),
 
           // ── Flutter Map ──
           Expanded(
@@ -357,7 +394,10 @@ class _MapScreenState extends State<MapScreen> {
                       ),
 
                     // ── Listing markers from Firestore ──
-                    _ListingMarkersLayer(),
+                    _ListingMarkersLayer(
+                      subcategoryFilter: _selectedSubcategory,
+                      categoryFilter: _selectedCategoryFilter,
+                    ),
 
                     // ── User / search markers ──
                     MarkerLayer(
@@ -495,7 +535,9 @@ class _MapButton extends StatelessWidget {
 
 // ── Listing markers pulled from ListingsProvider ──
 class _ListingMarkersLayer extends StatelessWidget {
-  const _ListingMarkersLayer();
+  final String? subcategoryFilter;
+  final String? categoryFilter;
+  const _ListingMarkersLayer({this.subcategoryFilter, this.categoryFilter});
 
   Color _categoryColor(String cat) {
     switch (cat) {
@@ -517,9 +559,20 @@ class _ListingMarkersLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = ListingsScope.of(context);
-    final listings = provider.allListings
+    var listings = provider.allListings
         .where((l) => l.latitude != 0.0 || l.longitude != 0.0)
         .toList();
+
+    // Apply subcategory filter when one is active
+    if (subcategoryFilter != null && categoryFilter != null) {
+      listings = listings
+          .where(
+            (l) =>
+                l.category == categoryFilter &&
+                l.subcategory == subcategoryFilter,
+          )
+          .toList();
+    }
 
     return MarkerLayer(
       markers: listings.map((listing) {
@@ -549,44 +602,110 @@ class _ListingMarkersLayer extends StatelessWidget {
 // ── Category data class ──
 class _Cat {
   final String label;
+  final String listingKey; // matches Listing.categories key
   final IconData icon;
   final Color color;
-  const _Cat(this.label, this.icon, this.color);
+  const _Cat(this.label, this.listingKey, this.icon, this.color);
 }
 
-// ── Category chip button ──
+// ── Category chip button (used as PopupMenuButton child) ──
 class _CategoryChip extends StatelessWidget {
   final _Cat cat;
-  final VoidCallback onTap;
-  const _CategoryChip({required this.cat, required this.onTap});
+  final bool isActive;
+  const _CategoryChip({required this.cat, this.isActive = false});
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: cat.color,
+      color: isActive ? cat.color : cat.color.withAlpha(220),
       borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Container(
-          height: 48,
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(cat.icon, color: Colors.white, size: 18),
-              const SizedBox(height: 2),
-              Text(
-                cat.label,
-                style: const TextStyle(
+      child: Container(
+        height: 48,
+        alignment: Alignment.center,
+        decoration: isActive
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white, width: 2),
+              )
+            : null,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(cat.icon, color: Colors.white, size: 18),
+            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    cat.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_drop_down,
                   color: Colors.white,
-                  fontSize: 10,
+                  size: 14,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Active filter banner ──
+class _ActiveFilterBanner extends StatelessWidget {
+  final String subcategory;
+  final Color color;
+  final VoidCallback onClear;
+  const _ActiveFilterBanner({
+    required this.subcategory,
+    required this.color,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withAlpha(30),
+          border: Border.all(color: color),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.location_on, size: 15, color: color),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Showing: $subcategory',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: color,
                   fontWeight: FontWeight.w600,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: onClear,
+              child: Icon(Icons.close, size: 16, color: color),
+            ),
+          ],
         ),
       ),
     );

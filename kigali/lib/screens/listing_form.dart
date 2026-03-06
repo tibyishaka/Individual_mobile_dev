@@ -24,6 +24,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   late String _selectedCategory;
   bool _isSaving = false;
   XFile? _imageFile;
+  String? _selectedSubcategory;
 
   bool get _isEditing => widget.listing != null;
 
@@ -36,6 +37,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     _contactController = TextEditingController(text: l?.contactNumber ?? '');
     _descriptionController = TextEditingController(text: l?.description ?? '');
     _selectedCategory = l?.category ?? Listing.categories.first;
+    _selectedSubcategory = l?.subcategory;
   }
 
   @override
@@ -162,6 +164,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
         createdBy: widget.listing?.createdBy ?? '',
         timestamp: widget.listing?.timestamp ?? DateTime.now(),
         imageUrl: imageUrl,
+        subcategory: _selectedSubcategory,
       );
 
       if (_isEditing) {
@@ -234,14 +237,30 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              initialValue: _selectedCategory,
+              value: _selectedCategory,
               decoration: _inputDecoration('Category', Icons.category),
               items: Listing.categories
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                   .toList(),
               onChanged: (v) {
-                if (v != null) setState(() => _selectedCategory = v);
+                if (v != null) {
+                  setState(() {
+                    _selectedCategory = v;
+                    _selectedSubcategory = null; // reset when category changes
+                  });
+                }
               },
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedSubcategory,
+              decoration: _inputDecoration('Subcategory', Icons.label_outline),
+              items: (Listing.subcategories[_selectedCategory] ?? [])
+                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedSubcategory = v),
+              validator: (v) =>
+                  v == null ? 'Please select a subcategory' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
