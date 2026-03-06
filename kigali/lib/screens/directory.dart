@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../localisation/app_localizations.dart';
 import '../models/listing.dart';
 import '../providers/listings_provider.dart';
 import 'listing_form.dart';
@@ -10,9 +11,10 @@ class DirectoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = ListingsScope.of(context);
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Directory'), centerTitle: true),
+      appBar: AppBar(title: Text(l10n.listingsTitle), centerTitle: true),
       body: Column(
         children: [
           // Search bar
@@ -20,7 +22,7 @@ class DirectoryScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search by name...',
+                hintText: l10n.searchHintDirectory,
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: theme.colorScheme.surfaceContainerHighest.withAlpha(
@@ -32,7 +34,9 @@ class DirectoryScreen extends StatelessWidget {
                   borderSide: BorderSide.none,
                 ),
               ),
-              onChanged: provider.setSearchQuery,
+              onChanged: (v) {
+                provider.setSearchQuery(v);
+              },
             ),
           ),
 
@@ -46,7 +50,7 @@ class DirectoryScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: FilterChip(
-                    label: const Text('All'),
+                    label: Text(l10n.filterAll),
                     selected: provider.selectedCategory == null,
                     onSelected: (_) => provider.setCategory(null),
                   ),
@@ -70,7 +74,7 @@ class DirectoryScreen extends StatelessWidget {
           const SizedBox(height: 4),
 
           // Listings
-          Expanded(child: _buildBody(context, provider, theme)),
+          Expanded(child: _buildBody(context, provider, theme, l10n)),
         ],
       ),
     );
@@ -80,6 +84,7 @@ class DirectoryScreen extends StatelessWidget {
     BuildContext context,
     ListingsProvider provider,
     ThemeData theme,
+    AppLocalizations l10n,
   ) {
     if (provider.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -93,13 +98,13 @@ class DirectoryScreen extends StatelessWidget {
             Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
             const SizedBox(height: 8),
             Text(
-              'Failed to load listings',
+              l10n.failedLoad,
               style: TextStyle(color: theme.colorScheme.error),
             ),
             const SizedBox(height: 8),
             FilledButton.tonal(
               onPressed: provider.startListening,
-              child: const Text('Retry'),
+              child: Text(l10n.retryLabel),
             ),
           ],
         ),
@@ -119,7 +124,7 @@ class DirectoryScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'No listings found',
+              l10n.noListings,
               style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
             ),
           ],

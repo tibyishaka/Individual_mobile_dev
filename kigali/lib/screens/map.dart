@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import '../localisation/app_localizations.dart';
 import '../models/listing.dart';
 import '../providers/listings_provider.dart';
 import 'listing_detail.dart';
 
-/// Geographic center of Rwanda
-const _rwandaCenter = LatLng(-1.9403, 29.8739);
+/// Geographic center of Kigali City
+const _kigaliCenter = LatLng(-1.9441, 30.0619);
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -34,8 +35,8 @@ class _MapScreenState extends State<MapScreen> {
   String? _selectedCategoryFilter;
 
   static const _categories = [
-    _Cat('Health', 'Health', Icons.local_hospital, Colors.red),
-    _Cat('Government', 'Government', Icons.account_balance, Colors.blue),
+    _Cat('Health', 'Health', Icons.local_hospital, Colors.blue),
+    _Cat('Govt', 'Government', Icons.account_balance, Colors.teal),
     _Cat('Entertain.', 'Entertainment', Icons.movie, Colors.purple),
     _Cat('Education', 'Education', Icons.school, Colors.orange),
     _Cat('Tourist', 'Tourist Attraction', Icons.tour, Colors.green),
@@ -133,22 +134,26 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // ── Fetch route from OSRM (free, no API key) ──
-  Future<void> _fetchRoute() async {
-    if (_userLocation == null || _searchedLocation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Need both your location and a destination'),
-        ),
-      );
+  Future<void> _fetchRoute(LatLng destination, String destinationName) async {
+    if (_userLocation == null) {
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.noLocationWarning)));
+      }
       return;
     }
 
-    setState(() => _isFetchingRoute = true);
+    setState(() {
+      _isFetchingRoute = true;
+      _searchedLocation = destination;
+      _searchedName = destinationName;
+    });
 
     try {
       final from = '${_userLocation!.longitude},${_userLocation!.latitude}';
-      final to =
-          '${_searchedLocation!.longitude},${_searchedLocation!.latitude}';
+      final to = '${destination.longitude},${destination.latitude}';
 
       final uri = Uri.parse(
         'https://router.project-osrm.org/route/v1/driving/$from;$to'
@@ -196,6 +201,22 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  // ── Open directions bottom-sheet popup ──
+  void _openDirectionsSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _DirectionsSheet(
+        userLocation: _userLocation,
+        onNavigate: (destination, name) {
+          Navigator.pop(ctx);
+          _fetchRoute(destination, name);
+        },
+      ),
+    );
+  }
+
   // ── Compute bounds from a list of points ──
   LatLngBounds _boundsFromPoints(List<LatLng> points) {
     double minLat = points.first.latitude;
@@ -224,7 +245,7 @@ class _MapScreenState extends State<MapScreen> {
     });
     _searchController.clear();
     _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(_rwandaCenter, 9.0),
+      CameraUpdate.newLatLngZoom(_kigaliCenter, 13.0),
     );
   }
 
@@ -290,9 +311,9 @@ class _MapScreenState extends State<MapScreen> {
   double _categoryHue(String cat) {
     switch (cat) {
       case 'Health':
-        return BitmapDescriptor.hueRed;
-      case 'Government':
         return BitmapDescriptor.hueBlue;
+      case 'Government':
+        return BitmapDescriptor.hueCyan;
       case 'Entertainment':
         return BitmapDescriptor.hueViolet;
       case 'Education':
@@ -307,9 +328,10 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Map'), centerTitle: true),
+      appBar: AppBar(title: Text(l10n.navMap), centerTitle: true),
       body: Column(
         children: [
           // ── Search Bar ──
@@ -318,7 +340,7 @@ class _MapScreenState extends State<MapScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search for a place in Rwanda...',
+                hintText: l10n.searchHintMap,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _isSearching
                     ? const Padding(
@@ -439,6 +461,7 @@ class _MapScreenState extends State<MapScreen> {
           if (_selectedSubcategory != null)
             _ActiveFilterBanner(
               subcategory: _selectedSubcategory!,
+              showingLabel: l10n.showingFilter,
               color: _categories
                   .firstWhere(
                     (c) => c.listingKey == _selectedCategoryFilter,
@@ -458,8 +481,8 @@ class _MapScreenState extends State<MapScreen> {
                 GoogleMap(
                   mapType: _mapType,
                   initialCameraPosition: const CameraPosition(
-                    target: _rwandaCenter,
-                    zoom: 9.0,
+                    target: _kigaliCenter,
+                    zoom: 13.0,
                   ),
                   onMapCreated: (controller) => _mapController = controller,
                   myLocationEnabled: true,
@@ -481,8 +504,8 @@ class _MapScreenState extends State<MapScreen> {
                             ? Icons.map
                             : Icons.satellite,
                         tooltip: _mapType == MapType.satellite
-                            ? 'Street View'
-                            : 'Satellite View',
+                            ? l10n.streetView
+                            : l10n.satelliteView,
                         onTap: () => setState(() {
                           _mapType = _mapType == MapType.normal
                               ? MapType.satellite
@@ -494,7 +517,7 @@ class _MapScreenState extends State<MapScreen> {
                       // My location
                       _MapButton(
                         icon: Icons.my_location,
-                        tooltip: 'My Location',
+                        tooltip: l10n.myLocation,
                         onTap: () async {
                           await _determinePosition();
                           if (_userLocation != null) {
@@ -506,20 +529,40 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                       const SizedBox(height: 8),
 
-                      // Get directions (route)
+                      // Get directions → opens popup
                       _MapButton(
                         icon: _isFetchingRoute
                             ? Icons.hourglass_top
                             : Icons.directions,
-                        tooltip: 'Get Directions',
-                        onTap: _isFetchingRoute ? () {} : _fetchRoute,
+                        tooltip: l10n.getDirections,
+                        onTap: _isFetchingRoute ? () {} : _openDirectionsSheet,
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Zoom In
+                      _MapButton(
+                        icon: Icons.add,
+                        tooltip: 'Zoom In',
+                        onTap: () => _mapController?.animateCamera(
+                          CameraUpdate.zoomIn(),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Zoom Out
+                      _MapButton(
+                        icon: Icons.remove,
+                        tooltip: 'Zoom Out',
+                        onTap: () => _mapController?.animateCamera(
+                          CameraUpdate.zoomOut(),
+                        ),
                       ),
                       const SizedBox(height: 8),
 
                       // Clear / refresh
                       _MapButton(
                         icon: Icons.refresh,
-                        tooltip: 'Clear Route',
+                        tooltip: l10n.clearRoute,
                         onTap: _clearRoute,
                       ),
                     ],
@@ -529,6 +572,276 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Directions bottom-sheet popup
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DirectionsSheet extends StatefulWidget {
+  final LatLng? userLocation;
+  final void Function(LatLng destination, String name) onNavigate;
+
+  const _DirectionsSheet({
+    required this.userLocation,
+    required this.onNavigate,
+  });
+
+  @override
+  State<_DirectionsSheet> createState() => _DirectionsSheetState();
+}
+
+class _DirectionsSheetState extends State<_DirectionsSheet> {
+  final TextEditingController _destController = TextEditingController();
+  List<_SearchResult> _suggestions = [];
+  bool _isSearching = false;
+  _SearchResult? _selected;
+
+  @override
+  void dispose() {
+    _destController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _searchDestination(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _suggestions = [];
+        _selected = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _selected = null;
+    });
+
+    try {
+      final uri = Uri.parse(
+        'https://nominatim.openstreetmap.org/search'
+        '?q=\${Uri.encodeComponent(query)}'
+        '&format=json'
+        '&limit=6'
+        '&countrycodes=rw',
+      );
+      final response = await http.get(
+        uri,
+        headers: {'User-Agent': 'KigaliApp/1.0'},
+      );
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        setState(() {
+          _suggestions = data
+              .map(
+                (item) => _SearchResult(
+                  name: item['display_name'] as String,
+                  lat: double.parse(item['lat'] as String),
+                  lon: double.parse(item['lon'] as String),
+                ),
+              )
+              .toList();
+        });
+      }
+    } catch (_) {
+      // Silently handle network errors
+    } finally {
+      setState(() => _isSearching = false);
+    }
+  }
+
+  void _selectSuggestion(_SearchResult result) {
+    setState(() {
+      _selected = result;
+      _suggestions = [];
+      _destController.text = result.name.split(',').first;
+    });
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurfaceVariant.withAlpha(80),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Text(
+                l10n.directionsTitle,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // From: current location row
+              Row(
+                children: [
+                  const Icon(Icons.my_location, color: Colors.blue, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withAlpha(120),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        widget.userLocation != null
+                            ? l10n.yourLocation
+                            : l10n.gettingLocation,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Dotted connector
+              Padding(
+                padding: const EdgeInsets.only(left: 9),
+                child: Container(
+                  width: 2,
+                  height: 16,
+                  color: theme.colorScheme.onSurfaceVariant.withAlpha(60),
+                ),
+              ),
+
+              // To: search field row
+              Row(
+                children: [
+                  const Icon(Icons.location_on, color: Colors.red, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _destController,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: l10n.searchDestination,
+                        filled: true,
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withAlpha(120),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        suffixIcon: _isSearching
+                            ? const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                      onChanged: _searchDestination,
+                    ),
+                  ),
+                ],
+              ),
+
+              // Suggestion list
+              if (_suggestions.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.only(top: 4, left: 32),
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    itemCount: _suggestions.length,
+                    // ignore: unnecessary_underscores
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 12, endIndent: 12),
+                    itemBuilder: (_, i) {
+                      final r = _suggestions[i];
+                      return ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.place, size: 18),
+                        title: Text(
+                          r.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        onTap: () => _selectSuggestion(r),
+                      );
+                    },
+                  ),
+                ),
+
+              const SizedBox(height: 20),
+
+              // Get Directions button
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _selected != null
+                      ? () => widget.onNavigate(
+                          LatLng(_selected!.lat, _selected!.lon),
+                          _selected!.name.split(',').first,
+                        )
+                      : null,
+                  icon: const Icon(Icons.directions),
+                  label: Text(l10n.getDirections),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -642,10 +955,12 @@ class _CategoryChip extends StatelessWidget {
 class _ActiveFilterBanner extends StatelessWidget {
   final String subcategory;
   final Color color;
+  final String showingLabel;
   final VoidCallback onClear;
   const _ActiveFilterBanner({
     required this.subcategory,
     required this.color,
+    required this.showingLabel,
     required this.onClear,
   });
 
@@ -667,7 +982,7 @@ class _ActiveFilterBanner extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                'Showing: $subcategory',
+                '$showingLabel: $subcategory',
                 style: TextStyle(
                   fontSize: 13,
                   color: color,

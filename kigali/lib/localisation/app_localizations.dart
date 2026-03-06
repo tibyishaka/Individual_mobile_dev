@@ -95,6 +95,27 @@ class AppLocalizations {
   String get saveChanges => _t('saveChanges');
   String get noNameSet => _t('noNameSet');
 
+  // ── Map screen ──
+  String get searchHintMap => _t('searchHintMap');
+  String get getDirections => _t('getDirections');
+  String get clearRoute => _t('clearRoute');
+  String get myLocation => _t('myLocation');
+  String get streetView => _t('streetView');
+  String get satelliteView => _t('satelliteView');
+  String get showingFilter => _t('showingFilter');
+  String get directionsTitle => _t('directionsTitle');
+  String get yourLocation => _t('yourLocation');
+  String get gettingLocation => _t('gettingLocation');
+  String get searchDestination => _t('searchDestination');
+  String get noLocationWarning => _t('noLocationWarning');
+
+  // ── Listings / Directory screen ──
+  String get listingsTitle => _t('listingsTitle');
+  String get searchHintDirectory => _t('searchHintDirectory');
+  String get filterAll => _t('filterAll');
+  String get failedLoad => _t('failedLoad');
+  String get retryLabel => _t('retryLabel');
+
   // ── Sign In ──
   String get cityGuide => _t('cityGuide');
   String get forgotPassword => _t('forgotPassword');
@@ -233,7 +254,26 @@ class AppLocalizations {
       'errEmailInUse': 'An account already exists for this email.',
       'errWeakPassword': 'Password is too weak (minimum 6 characters).',
       'errOpNotAllowed': 'Email sign-up is not enabled. Contact support.',
-      'errRegFailed': 'Registration failed. Please try again.',
+      'errRegFailed':
+          'Registration failed. Please try again.', // ── Map screen ──
+      'searchHintMap': 'Search for a place in Kigali...',
+      'getDirections': 'Get Directions',
+      'clearRoute': 'Clear Route',
+      'myLocation': 'My Location',
+      'streetView': 'Street View',
+      'satelliteView': 'Satellite View',
+      'showingFilter': 'Showing',
+      'directionsTitle': 'Plan Your Route',
+      'yourLocation': 'Your location',
+      'gettingLocation': 'Getting location...',
+      'searchDestination': 'Search for destination...',
+      'noLocationWarning': 'Location not available. Enable location services.',
+      // ── Listings / Directory screen ──
+      'listingsTitle': 'Directory',
+      'searchHintDirectory': 'Search by name...',
+      'filterAll': 'All',
+      'failedLoad': 'Failed to load listings',
+      'retryLabel': 'Retry',
     },
 
     // ── Français ──────────────────────────────────────────────
@@ -311,7 +351,26 @@ class AppLocalizations {
       'errEmailInUse': 'Un compte existe déjà pour cet e-mail.',
       'errWeakPassword': 'Mot de passe trop faible (minimum 6 caractères).',
       'errOpNotAllowed': "L'inscription par e-mail n'est pas activée.",
-      'errRegFailed': "Échec de l'inscription. Veuillez réessayer.",
+      'errRegFailed':
+          "Échec de l'inscription. Veuillez réessayer.", // ── Map screen ──
+      'searchHintMap': 'Rechercher un lieu à Kigali...',
+      'getDirections': 'Obtenir l\'itinéraire',
+      'clearRoute': 'Effacer l\'itinéraire',
+      'myLocation': 'Ma position',
+      'streetView': 'Vue de rue',
+      'satelliteView': 'Vue satellite',
+      'showingFilter': 'Affichage',
+      'directionsTitle': 'Planifier votre itinéraire',
+      'yourLocation': 'Votre position',
+      'gettingLocation': 'Localisation en cours...',
+      'searchDestination': 'Rechercher une destination...',
+      'noLocationWarning': 'Position indisponible. Activez la localisation.',
+      // ── Listings / Directory screen ──
+      'listingsTitle': 'Répertoire',
+      'searchHintDirectory': 'Rechercher par nom...',
+      'filterAll': 'Tout',
+      'failedLoad': 'Échec du chargement des annonces',
+      'retryLabel': 'Réessayer',
     },
 
     // ── Kinyarwanda ───────────────────────────────────────────
@@ -390,7 +449,25 @@ class AppLocalizations {
       'errEmailInUse': 'Konti ifite iyi meyili isanzwe ibaho.',
       'errWeakPassword': 'Ijambo banga risumbya (nibura inyuguti 6).',
       'errOpNotAllowed': 'Iyandikisha ryahagaritswe. Wasiliana na tekinike.',
-      'errRegFailed': 'Iyandikisha ryanze. Subiramo.',
+      'errRegFailed': 'Iyandikisha ryanze. Subiramo.', // ── Map screen ──
+      'searchHintMap': 'Shakisha ahantu i Kigali...',
+      'getDirections': 'Shakisha Inzira',
+      'clearRoute': 'Siba Inzira',
+      'myLocation': 'Aho Ndi',
+      'streetView': 'Kureba Umuhanda',
+      'satelliteView': 'Kureba kwa Satelite',
+      'showingFilter': 'Erekana',
+      'directionsTitle': 'Tegura Inzira Yawe',
+      'yourLocation': 'Aho uri',
+      'gettingLocation': 'Gushakisha aho uri...',
+      'searchDestination': 'Shakisha aho ugiye...',
+      'noLocationWarning': 'Aho uri ntiboneka. Fungura serivisi y\'aho uri.',
+      // ── Listings / Directory screen ──
+      'listingsTitle': 'Inyandiko',
+      'searchHintDirectory': 'Shakisha izina...',
+      'filterAll': 'Byose',
+      'failedLoad': 'Urutonde ntirushobotse gufungurwa',
+      'retryLabel': 'Subiramo',
     },
 
     // ── Kiswahili ─────────────────────────────────────────────
@@ -468,7 +545,25 @@ class AppLocalizations {
       'errEmailInUse': 'Akaunti ipo tayari kwa barua pepe hii.',
       'errWeakPassword': 'Nywila ni dhaifu (angalau herufi 6).',
       'errOpNotAllowed': 'Usajili wa barua pepe haujawezeshwa.',
-      'errRegFailed': 'Usajili umeshindikana. Jaribu tena.',
+      'errRegFailed': 'Usajili umeshindikana. Jaribu tena.', // ── Map screen ──
+      'searchHintMap': 'Tafuta mahali Kigali...',
+      'getDirections': 'Pata Maelekezo',
+      'clearRoute': 'Futa Njia',
+      'myLocation': 'Eneo Langu',
+      'streetView': 'Mtazamo wa Barabara',
+      'satelliteView': 'Mtazamo wa Setilaiti',
+      'showingFilter': 'Inaonyesha',
+      'directionsTitle': 'Panga Safari Yako',
+      'yourLocation': 'Eneo lako',
+      'gettingLocation': 'Inapata eneo...',
+      'searchDestination': 'Tafuta marudio...',
+      'noLocationWarning': 'Eneo halipatikani. Washa huduma za eneo.',
+      // ── Listings / Directory screen ──
+      'listingsTitle': 'Saraka',
+      'searchHintDirectory': 'Tafuta kwa jina...',
+      'filterAll': 'Yote',
+      'failedLoad': 'Imeshindwa kupakia orodha',
+      'retryLabel': 'Jaribu tena',
     },
 
     // ── Deutsch ───────────────────────────────────────────────
@@ -547,7 +642,27 @@ class AppLocalizations {
       'errEmailInUse': 'Ein Konto für diese E-Mail existiert bereits.',
       'errWeakPassword': 'Passwort zu schwach (mindestens 6 Zeichen).',
       'errOpNotAllowed': 'E-Mail-Anmeldung ist nicht aktiviert.',
-      'errRegFailed': 'Registrierung fehlgeschlagen. Bitte versuche es erneut.',
+      'errRegFailed':
+          'Registrierung fehlgeschlagen. Bitte versuche es erneut.', // ── Map screen ──
+      'searchHintMap': 'Ort in Kigali suchen...',
+      'getDirections': 'Route berechnen',
+      'clearRoute': 'Route löschen',
+      'myLocation': 'Mein Standort',
+      'streetView': 'Straßenansicht',
+      'satelliteView': 'Satellitenansicht',
+      'showingFilter': 'Zeigt',
+      'directionsTitle': 'Route planen',
+      'yourLocation': 'Ihr Standort',
+      'gettingLocation': 'Standort wird ermittelt...',
+      'searchDestination': 'Ziel suchen...',
+      'noLocationWarning':
+          'Standort nicht verfügbar. Aktiviere Ortungsdienste.',
+      // ── Listings / Directory screen ──
+      'listingsTitle': 'Verzeichnis',
+      'searchHintDirectory': 'Nach Name suchen...',
+      'filterAll': 'Alle',
+      'failedLoad': 'Einträge konnten nicht geladen werden',
+      'retryLabel': 'Erneut versuchen',
     },
 
     // ── Español ───────────────────────────────────────────────
@@ -627,6 +742,26 @@ class AppLocalizations {
       'errWeakPassword': 'La contraseña es débil (mínimo 6 caracteres).',
       'errOpNotAllowed': 'El registro por correo no está habilitado.',
       'errRegFailed': 'Error en el registro. Inténtalo de nuevo.',
+      // ── Map screen ──
+      'searchHintMap': 'Buscar un lugar en Kigali...',
+      'getDirections': 'Obtener indicaciones',
+      'clearRoute': 'Borrar ruta',
+      'myLocation': 'Mi ubicación',
+      'streetView': 'Vista de calle',
+      'satelliteView': 'Vista satelital',
+      'showingFilter': 'Mostrando',
+      'directionsTitle': 'Planifica tu ruta',
+      'yourLocation': 'Tu ubicación',
+      'gettingLocation': 'Obteniendo ubicación...',
+      'searchDestination': 'Buscar destino...',
+      'noLocationWarning':
+          'Ubicación no disponible. Activa los servicios de ubicación.',
+      // ── Listings / Directory screen ──
+      'listingsTitle': 'Directorio',
+      'searchHintDirectory': 'Buscar por nombre...',
+      'filterAll': 'Todos',
+      'failedLoad': 'Error al cargar los listados',
+      'retryLabel': 'Reintentar',
     },
   };
 }
