@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
+import '../localisation/app_localizations.dart';
 import '../main_navigation.dart';
 
 class RegisterScreen extends StatefulWidget {

@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
-import 'l10n/app_localizations.dart';
+import 'localisation/app_localizations.dart';
 import 'main_navigation.dart';
 import 'screens/sign_in.dart';
 import 'providers/settings_provider.dart';

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
+import '../localisation/app_localizations.dart';
 import 'settings.dart';
 import 'category.dart';
 

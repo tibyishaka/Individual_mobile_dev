@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
+import '../localisation/app_localizations.dart';
 import '../models/listing.dart';
 import '../providers/listings_provider.dart';
 import 'listing_detail.dart';

@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
+import '../localisation/app_localizations.dart';
 import '../main_navigation.dart';
 import 'register.dart';
 
