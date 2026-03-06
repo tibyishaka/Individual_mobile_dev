@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/listing.dart';
+import '../models/review.dart';
 
 class ListingsProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -110,6 +111,69 @@ class ListingsProvider extends ChangeNotifier {
   }
 
   bool isOwner(Listing listing) => listing.createdBy == currentUserId;
+
+  // ── Reviews ──
+
+  /// Stream reviews for a listing, ordered newest first.
+  Stream<List<Review>> getReviews(String listingId) {
+    return _firestore
+        .collection('listings')
+        .doc(listingId)
+        .collection('reviews')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map(Review.fromDocument).toList());
+  }
+
+  /// Add a review to a listing.
+  Future<void> addReview(String listingId, Review review) async {
+    await ensureAuthenticated();
+    await _firestore
+        .collection('listings')
+        .doc(listingId)
+        .collection('reviews')
+        .add(review.toMap());
+  }
+
+  /// Check whether the current user has already reviewed a listing.
+  Future<bool> hasReviewed(String listingId) async {
+    if (currentUserId == null) return false;
+    final snap = await _firestore
+        .collection('listings')
+        .doc(listingId)
+        .collection('reviews')
+        .where('userId', isEqualTo: currentUserId)
+        .limit(1)
+        .get();
+    return snap.docs.isNotEmpty;
+  }
+
+  // ── User profile helpers ──
+
+  /// Save display name for the current user.
+  Future<void> saveDisplayName(String name) async {
+    await ensureAuthenticated();
+    await _firestore.collection('users').doc(currentUserId).set({
+      'displayName': name,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Get display name for the current user from Firestore.
+  Future<String?> getDisplayName() async {
+    if (currentUserId == null) return null;
+    final doc = await _firestore.collection('users').doc(currentUserId).get();
+    return doc.data()?['displayName'] as String?;
+  }
+
+  /// Save FCM token to Firestore for the current user.
+  Future<void> saveFCMToken(String token) async {
+    await ensureAuthenticated();
+    await _firestore.collection('users').doc(currentUserId).set({
+      'fcmToken': token,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 
   @override
   void dispose() {

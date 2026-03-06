@@ -1,18 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import '../providers/listings_provider.dart';
 import 'category.dart';
+import 'listing_detail.dart';
 
-/// Kigali city center
-const _kigaliCenter = LatLng(-1.9441, 30.0619);
-
-/// Kigali bounding box for restricting camera & biasing search
-final _kigaliBounds = LatLngBounds(
-  southwest: const LatLng(-2.06, 29.90),
-  northeast: const LatLng(-1.83, 30.20),
-);
+/// Geographic center of Rwanda
+const _rwandaCenter = LatLng(-1.9403, 29.8739);
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -22,18 +19,17 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
 
-  MapType _mapType = MapType.hybrid; // satellite + labels by default
+  bool _isSatellite = false;
   LatLng? _userLocation;
   LatLng? _searchedLocation;
   String? _searchedName;
-  Set<Polyline> _polylines = {};
+  List<LatLng> _routePoints = [];
   bool _isSearching = false;
   bool _isFetchingRoute = false;
 
-  // Search suggestions from Nominatim
   List<_SearchResult> _suggestions = [];
 
   static const _categories = [
@@ -53,7 +49,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     _searchController.dispose();
-    _mapController?.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -70,9 +66,11 @@ class _MapScreenState extends State<MapScreen> {
     if (permission == LocationPermission.deniedForever) return;
 
     final position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _userLocation = LatLng(position.latitude, position.longitude);
-    });
+    if (mounted) {
+      setState(() {
+        _userLocation = LatLng(position.latitude, position.longitude);
+      });
+    }
   }
 
   // ── Search places using Nominatim (free, no API key) ──
@@ -90,8 +88,7 @@ class _MapScreenState extends State<MapScreen> {
         '?q=${Uri.encodeComponent(query)}'
         '&format=json'
         '&limit=5'
-        '&viewbox=29.90,-2.06,30.20,-1.83'
-        '&bounded=1',
+        '&countrycodes=rw',
       );
       final response = await http.get(
         uri,
@@ -124,10 +121,10 @@ class _MapScreenState extends State<MapScreen> {
       _searchedLocation = point;
       _searchedName = result.name.split(',').first;
       _suggestions = [];
-      _polylines = {}; // clear old route
+      _routePoints = [];
     });
     _searchController.text = _searchedName!;
-    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(point, 17.0));
+    _mapController.move(point, 16.0);
     FocusManager.instance.primaryFocus?.unfocus();
   }
 
@@ -165,22 +162,13 @@ class _MapScreenState extends State<MapScreen> {
             )
             .toList();
 
-        setState(() {
-          _polylines = {
-            Polyline(
-              polylineId: const PolylineId('route'),
-              points: routePoints,
-              color: Colors.blue,
-              width: 5,
-            ),
-          };
-        });
+        setState(() => _routePoints = routePoints);
 
         // Fit map to show entire route
         if (routePoints.isNotEmpty) {
           final bounds = _boundsFromPoints(routePoints);
-          _mapController?.animateCamera(
-            CameraUpdate.newLatLngBounds(bounds, 60),
+          _mapController.fitCamera(
+            CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(60)),
           );
         }
       }
@@ -191,7 +179,7 @@ class _MapScreenState extends State<MapScreen> {
         ).showSnackBar(const SnackBar(content: Text('Could not fetch route')));
       }
     } finally {
-      setState(() => _isFetchingRoute = false);
+      if (mounted) setState(() => _isFetchingRoute = false);
     }
   }
 
@@ -207,42 +195,19 @@ class _MapScreenState extends State<MapScreen> {
       if (p.longitude < minLng) minLng = p.longitude;
       if (p.longitude > maxLng) maxLng = p.longitude;
     }
-    return LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
-    );
+    return LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng));
   }
 
   // ── Clear route and search ──
   void _clearRoute() {
     setState(() {
-      _polylines = {};
+      _routePoints = [];
       _searchedLocation = null;
       _searchedName = null;
       _suggestions = [];
     });
     _searchController.clear();
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(_kigaliCenter, 17.0),
-    );
-  }
-
-  // ── Build markers set ──
-  Set<Marker> get _markers {
-    final markers = <Marker>{};
-    if (_searchedLocation != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('destination'),
-          position: _searchedLocation!,
-          infoWindow: InfoWindow(title: _searchedName ?? 'Destination'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueGreen,
-          ),
-        ),
-      );
-    }
-    return markers;
+    _mapController.move(_rwandaCenter, 9.0);
   }
 
   @override
@@ -259,7 +224,7 @@ class _MapScreenState extends State<MapScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search for a place in Kigali...',
+                hintText: 'Search for a place in Rwanda...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _isSearching
                     ? const Padding(
@@ -357,26 +322,76 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          // ── Google Map ──
+          // ── Flutter Map ──
           Expanded(
             child: Stack(
               children: [
-                GoogleMap(
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-                  },
-                  initialCameraPosition: const CameraPosition(
-                    target: _kigaliCenter,
-                    zoom: 17.0,
+                FlutterMap(
+                  mapController: _mapController,
+                  options: const MapOptions(
+                    initialCenter: _rwandaCenter,
+                    initialZoom: 9.0,
+                    minZoom: 7.0,
+                    maxZoom: 19.0,
                   ),
-                  mapType: _mapType,
-                  markers: _markers,
-                  polylines: _polylines,
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: false, // we have our own
-                  zoomControlsEnabled: false,
-                  cameraTargetBounds: CameraTargetBounds(_kigaliBounds),
-                  minMaxZoomPreference: const MinMaxZoomPreference(10, 20),
+                  children: [
+                    // ── Tile Layer ──
+                    TileLayer(
+                      urlTemplate: _isSatellite
+                          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                          : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.kigali.app',
+                      maxZoom: 19,
+                    ),
+
+                    // ── Route Polyline ──
+                    if (_routePoints.isNotEmpty)
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: _routePoints,
+                            color: Colors.blue,
+                            strokeWidth: 5.0,
+                          ),
+                        ],
+                      ),
+
+                    // ── Listing markers from Firestore ──
+                    _ListingMarkersLayer(),
+
+                    // ── User / search markers ──
+                    MarkerLayer(
+                      markers: [
+                        if (_userLocation != null)
+                          Marker(
+                            point: _userLocation!,
+                            width: 20,
+                            height: 20,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (_searchedLocation != null)
+                          Marker(
+                            point: _searchedLocation!,
+                            width: 40,
+                            height: 40,
+                            child: const Icon(
+                              Icons.location_on,
+                              color: Color(0xFF2ECC71),
+                              size: 40,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
 
                 // ── Map control buttons (top-right) ──
@@ -385,21 +400,14 @@ class _MapScreenState extends State<MapScreen> {
                   right: 12,
                   child: Column(
                     children: [
-                      // Toggle map type
+                      // Toggle street / satellite
                       _MapButton(
-                        icon: _mapType == MapType.hybrid
-                            ? Icons.map
-                            : Icons.satellite,
-                        tooltip: _mapType == MapType.hybrid
+                        icon: _isSatellite ? Icons.map : Icons.satellite,
+                        tooltip: _isSatellite
                             ? 'Street View'
                             : 'Satellite View',
-                        onTap: () {
-                          setState(() {
-                            _mapType = _mapType == MapType.hybrid
-                                ? MapType.normal
-                                : MapType.hybrid;
-                          });
-                        },
+                        onTap: () =>
+                            setState(() => _isSatellite = !_isSatellite),
                       ),
                       const SizedBox(height: 8),
 
@@ -410,9 +418,7 @@ class _MapScreenState extends State<MapScreen> {
                         onTap: () async {
                           await _determinePosition();
                           if (_userLocation != null) {
-                            _mapController?.animateCamera(
-                              CameraUpdate.newLatLngZoom(_userLocation!, 17.0),
-                            );
+                            _mapController.move(_userLocation!, 16.0);
                           }
                         },
                       ),
@@ -483,6 +489,59 @@ class _MapButton extends StatelessWidget {
           child: Icon(icon, size: 22),
         ),
       ),
+    );
+  }
+}
+
+// ── Listing markers pulled from ListingsProvider ──
+class _ListingMarkersLayer extends StatelessWidget {
+  const _ListingMarkersLayer();
+
+  Color _categoryColor(String cat) {
+    switch (cat) {
+      case 'Health':
+        return Colors.red;
+      case 'Government':
+        return Colors.blue;
+      case 'Entertainment':
+        return Colors.purple;
+      case 'Education':
+        return Colors.orange;
+      case 'Tourist Attraction':
+        return Colors.green;
+      default:
+        return Colors.deepPurple;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = ListingsScope.of(context);
+    final listings = provider.allListings
+        .where((l) => l.latitude != 0.0 || l.longitude != 0.0)
+        .toList();
+
+    return MarkerLayer(
+      markers: listings.map((listing) {
+        return Marker(
+          point: LatLng(listing.latitude, listing.longitude),
+          width: 36,
+          height: 36,
+          child: GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ListingDetailScreen(listing: listing),
+              ),
+            ),
+            child: Icon(
+              Icons.location_on,
+              color: _categoryColor(listing.category),
+              size: 36,
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

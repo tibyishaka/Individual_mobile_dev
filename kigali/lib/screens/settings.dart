@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../providers/listings_provider.dart';
 import '../providers/settings_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -113,7 +115,22 @@ class SettingsScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: () async {
+                final auth = FirebaseAuth.instance;
+                await auth.signOut();
+                await auth.signInAnonymously();
+                // Restart listeners with new UID
+                if (context.mounted) {
+                  final provider = ListingsScope.of(context);
+                  await provider.ensureAuthenticated();
+                  provider.startListening();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Signed out and refreshed session'),
+                    ),
+                  );
+                }
+              },
               icon: const Icon(Icons.logout),
               label: const Text('Log Out'),
               style: OutlinedButton.styleFrom(
@@ -142,6 +159,7 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = ListingsScope.of(context);
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -151,41 +169,65 @@ class _ProfileCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 36,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              child: Text(
-                'JD',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
+            FutureBuilder<String?>(
+              future: provider.getDisplayName(),
+              builder: (context, snap) {
+                final name = snap.data ?? '';
+                final initials = name.trim().isNotEmpty
+                    ? name
+                          .trim()
+                          .split(' ')
+                          .where((w) => w.isNotEmpty)
+                          .take(2)
+                          .map((w) => w[0].toUpperCase())
+                          .join()
+                    : '?';
+                return CircleAvatar(
+                  radius: 36,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: Text(
+                    initials,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                );
+              },
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'John Doe',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'johndoe@example.com',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+              child: FutureBuilder<String?>(
+                future: provider.getDisplayName(),
+                builder: (context, snap) {
+                  final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+                  final shortUid = uid.length > 8
+                      ? '${uid.substring(0, 8)}…'
+                      : uid;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        snap.data?.isNotEmpty == true
+                            ? snap.data!
+                            : 'Anonymous User',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'UID: $shortUid',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
             FilledButton.tonal(
-              onPressed: () {
-                _showEditProfileSheet(context);
-              },
+              onPressed: () => _showEditProfileSheet(context, provider),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 shape: RoundedRectangleBorder(
@@ -200,8 +242,15 @@ class _ProfileCard extends StatelessWidget {
     );
   }
 
-  void _showEditProfileSheet(BuildContext context) {
+  void _showEditProfileSheet(BuildContext context, ListingsProvider provider) {
     final theme = Theme.of(context);
+    final nameController = TextEditingController();
+    // Pre-fill current name
+    provider.getDisplayName().then((name) {
+      if (name != null) nameController.text = name;
+    });
+    bool isSaving = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -209,98 +258,79 @@ class _ProfileCard extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurfaceVariant.withAlpha(80),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
-              const SizedBox(height: 20),
-              Text('Edit Profile', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 24),
-              CircleAvatar(
-                radius: 44,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    Text(
-                      'JD',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurfaceVariant.withAlpha(80),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Edit Profile', style: theme.textTheme.titleLarge),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Display Name',
+                      hintText: 'Your name',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.person_outline),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: isSaving
+                        ? null
+                        : () async {
+                            final name = nameController.text.trim();
+                            if (name.isEmpty) return;
+                            setModalState(() => isSaving = true);
+                            try {
+                              await provider.saveDisplayName(name);
+                              if (context.mounted) Navigator.pop(context);
+                            } finally {
+                              if (context.mounted) {
+                                setModalState(() => isSaving = false);
+                              }
+                            }
+                          },
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: theme.colorScheme.primary,
-                      child: Icon(
-                        Icons.camera_alt,
-                        size: 14,
-                        color: theme.colorScheme.onPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Full Name',
-                  hintText: 'John Doe',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    child: isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Save Changes'),
                   ),
-                  prefixIcon: const Icon(Icons.person_outline),
-                ),
+                  const SizedBox(height: 8),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Phone',
-                  hintText: '+250 788 123 456',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  prefixIcon: const Icon(Icons.phone_outlined),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Address',
-                  hintText: 'Kigali, Rwanda',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  prefixIcon: const Icon(Icons.location_on_outlined),
-                ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Save Changes'),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
+            );
+          },
         );
       },
     );

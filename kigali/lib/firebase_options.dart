@@ -3,7 +3,6 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
@@ -42,7 +41,7 @@ class DefaultFirebaseOptions {
   }
 
   static FirebaseOptions get web => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_WEB_API_KEY']!,
+    apiKey: 'AIzaSyDYGMg11ovDvuVZEU5-8El_FvtN-wcynDs',
     appId: '1:260126413769:web:ddd110d9bd6d0068538e18',
     messagingSenderId: '260126413769',
     projectId: 'kigali-d887a',
@@ -51,7 +50,7 @@ class DefaultFirebaseOptions {
   );
 
   static FirebaseOptions get android => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_ANDROID_API_KEY']!,
+    apiKey: 'AIzaSyA3oUxvmIkyuAlhk6xuf2jTxYsMXw5VjHA',
     appId: '1:260126413769:android:3bc9930f8348bb91538e18',
     messagingSenderId: '260126413769',
     projectId: 'kigali-d887a',
@@ -59,7 +58,7 @@ class DefaultFirebaseOptions {
   );
 
   static FirebaseOptions get ios => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_IOS_API_KEY']!,
+    apiKey: 'AIzaSyCpn-uBWJbh6E93R5rcjZi02k1oHYdtUik',
     appId: '1:260126413769:ios:8d98982d93ffbd39538e18',
     messagingSenderId: '260126413769',
     projectId: 'kigali-d887a',
@@ -68,7 +67,7 @@ class DefaultFirebaseOptions {
   );
 
   static FirebaseOptions get macos => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_MACOS_API_KEY']!,
+    apiKey: 'AIzaSyCpn-uBWJbh6E93R5rcjZi02k1oHYdtUik',
     appId: '1:260126413769:ios:8d98982d93ffbd39538e18',
     messagingSenderId: '260126413769',
     projectId: 'kigali-d887a',
@@ -77,7 +76,7 @@ class DefaultFirebaseOptions {
   );
 
   static FirebaseOptions get windows => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_WINDOWS_API_KEY']!,
+    apiKey: 'AIzaSyDYGMg11ovDvuVZEU5-8El_FvtN-wcynDs',
     appId: '1:260126413769:web:c718a2a659c3cd86538e18',
     messagingSenderId: '260126413769',
     projectId: 'kigali-d887a',

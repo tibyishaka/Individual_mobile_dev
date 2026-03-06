@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
@@ -13,35 +14,55 @@ class SettingsProvider extends ChangeNotifier {
   bool get locationNotifications => _locationNotifications;
   bool get notificationsEnabled => _notificationsEnabled;
 
-  void setThemeMode(ThemeMode mode) {
+  /// Load persisted settings from SharedPreferences on app start.
+  Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _themeMode =
+        ThemeMode.values[prefs.getInt('themeMode') ?? ThemeMode.system.index];
+    _locale = Locale(prefs.getString('locale') ?? 'en');
+    _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
+    _useLocation = prefs.getBool('useLocation') ?? false;
+    _locationNotifications = prefs.getBool('locationNotifications') ?? false;
+    notifyListeners();
+  }
+
+  void setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('themeMode', mode.index);
   }
 
-  void setLocale(Locale locale) {
+  void setLocale(Locale locale) async {
     _locale = locale;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('locale', locale.languageCode);
   }
 
-  void setUseLocation(bool value) {
+  void setUseLocation(bool value) async {
     _useLocation = value;
-    if (!value) {
-      _locationNotifications = false;
-    }
+    if (!value) _locationNotifications = false;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('useLocation', value);
+    await prefs.setBool('locationNotifications', _locationNotifications);
   }
 
-  void setLocationNotifications(bool value) {
+  void setLocationNotifications(bool value) async {
     _locationNotifications = value;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('locationNotifications', value);
   }
 
-  void setNotificationsEnabled(bool value) {
+  void setNotificationsEnabled(bool value) async {
     _notificationsEnabled = value;
-    if (!value) {
-      _locationNotifications = false;
-    }
+    if (!value) _locationNotifications = false;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notificationsEnabled', value);
+    await prefs.setBool('locationNotifications', _locationNotifications);
   }
 }
 

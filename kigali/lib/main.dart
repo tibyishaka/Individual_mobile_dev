@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'main_navigation.dart';
 import 'providers/settings_provider.dart';
@@ -8,29 +8,62 @@ import 'providers/listings_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const MyApp());
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
+
+  // Initialise settings (loads persisted prefs) before runApp.
+  final settingsProvider = SettingsProvider();
+  await settingsProvider.init();
+
+  // Request FCM permission and save token.
+  final listingsProvider = ListingsProvider();
+  await listingsProvider.ensureAuthenticated();
+  listingsProvider.startListening();
+
+  try {
+    final messaging = FirebaseMessaging.instance;
+    final notifSettings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    if (notifSettings.authorizationStatus == AuthorizationStatus.authorized) {
+      final token = await messaging.getToken();
+      if (token != null) {
+        await listingsProvider.saveFCMToken(token);
+      }
+    }
+  } catch (_) {
+    // FCM is non-critical; continue if it fails.
+  }
+
+  runApp(
+    MyApp(
+      settingsProvider: settingsProvider,
+      listingsProvider: listingsProvider,
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final SettingsProvider settingsProvider;
+  final ListingsProvider listingsProvider;
+  const MyApp({
+    super.key,
+    required this.settingsProvider,
+    required this.listingsProvider,
+  });
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  final _settingsProvider = SettingsProvider();
-  final _listingsProvider = ListingsProvider();
-
-  @override
-  void initState() {
-    super.initState();
-    _listingsProvider.ensureAuthenticated().then((_) {
-      _listingsProvider.startListening();
-    });
-  }
+  late final SettingsProvider _settingsProvider = widget.settingsProvider;
+  late final ListingsProvider _listingsProvider = widget.listingsProvider;
 
   @override
   void dispose() {

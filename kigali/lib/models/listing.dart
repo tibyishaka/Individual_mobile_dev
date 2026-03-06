@@ -11,6 +11,7 @@ class Listing {
   final double longitude;
   final String createdBy;
   final DateTime timestamp;
+  final String? imageUrl;
 
   const Listing({
     this.id,
@@ -23,6 +24,7 @@ class Listing {
     required this.longitude,
     required this.createdBy,
     required this.timestamp,
+    this.imageUrl,
   });
 
   Map<String, dynamic> toMap() {
@@ -36,6 +38,7 @@ class Listing {
       'longitude': longitude,
       'createdBy': createdBy,
       'timestamp': Timestamp.fromDate(timestamp),
+      if (imageUrl != null) 'imageUrl': imageUrl,
     };
   }
 
@@ -52,6 +55,7 @@ class Listing {
       longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
       createdBy: data['createdBy'] as String? ?? '',
       timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      imageUrl: data['imageUrl'] as String?,
     );
   }
 
@@ -66,6 +70,7 @@ class Listing {
     double? longitude,
     String? createdBy,
     DateTime? timestamp,
+    String? imageUrl,
   }) {
     return Listing(
       id: id ?? this.id,
@@ -78,6 +83,7 @@ class Listing {
       longitude: longitude ?? this.longitude,
       createdBy: createdBy ?? this.createdBy,
       timestamp: timestamp ?? this.timestamp,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 

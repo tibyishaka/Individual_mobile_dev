@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../models/listing.dart';
 import '../providers/listings_provider.dart';
 
@@ -20,6 +23,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   late final TextEditingController _descriptionController;
   late String _selectedCategory;
   bool _isSaving = false;
+  XFile? _imageFile;
 
   bool get _isEditing => widget.listing != null;
 
@@ -41,6 +45,40 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     _contactController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final choice = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null) return;
+    final file = await ImagePicker().pickImage(
+      source: choice,
+      imageQuality: 75,
+      maxWidth: 1024,
+    );
+    if (file != null && mounted) setState(() => _imageFile = file);
   }
 
   /// Geocode an address string using Nominatim, biased to Kigali.
@@ -102,6 +140,16 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
         }
       }
 
+      // Upload image to Firebase Storage if a new image was picked.
+      String? imageUrl = widget.listing?.imageUrl;
+      if (_imageFile != null) {
+        final ref = FirebaseStorage.instance.ref().child(
+          'listings/${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
+        await ref.putFile(File(_imageFile!.path));
+        imageUrl = await ref.getDownloadURL();
+      }
+
       final listing = Listing(
         id: widget.listing?.id,
         name: _nameController.text.trim(),
@@ -113,6 +161,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
         longitude: lng,
         createdBy: widget.listing?.createdBy ?? '',
         timestamp: widget.listing?.timestamp ?? DateTime.now(),
+        imageUrl: imageUrl,
       );
 
       if (_isEditing) {
@@ -145,6 +194,38 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // ── Image Picker ──
+            GestureDetector(
+              onTap: _pickImage,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: _imageFile != null
+                      ? Image.file(
+                          File(_imageFile!.path),
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                        )
+                      : (_isEditing && widget.listing!.imageUrl != null)
+                      ? Image.network(
+                          widget.listing!.imageUrl!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          errorBuilder: (_, __, ___) =>
+                              _imagePlaceholder(context),
+                        )
+                      : _imagePlaceholder(context),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
               decoration: _inputDecoration('Place / Service Name', Icons.place),
@@ -212,6 +293,27 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _imagePlaceholder(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.add_photo_alternate_outlined,
+            size: 40,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Tap to add photo',
+            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }

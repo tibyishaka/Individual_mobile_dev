@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/listing.dart';
 import '../providers/listings_provider.dart';
+import 'listing_detail.dart';
 import 'listing_form.dart';
 
 class MyListingScreen extends StatefulWidget {
@@ -255,7 +256,7 @@ class _MyListingsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final myListings = provider.listings
+    final myListings = provider.allListings
         .where((l) => provider.isOwner(l))
         .toList();
 
@@ -317,7 +318,12 @@ class _ListingCard extends StatelessWidget {
       elevation: 1,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => _showDetails(context, theme),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ListingDetailScreen(listing: listing),
+          ),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
