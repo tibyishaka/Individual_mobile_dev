@@ -368,6 +368,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
+  latlng:
+    dependency: transitive
+    description:
+      name: latlng
+      sha256: a324c80073ef959d67ead88b57a717b7b87f182da1b980ccae92b3555ac82712
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.7"
   leak_tracker:
     dependency: transitive
     description:
@@ -400,6 +408,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.0"
+  map:
+    dependency: "direct main"
+    description:
+      name: map
+      sha256: "1343b0168f62098525703cbd9ef8351acd2c87c7fa2b34f22d3d1b839e24769d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.2"
   matcher:
     dependency: transitive
     description:

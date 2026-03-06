@@ -153,7 +153,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedCategory,
+              initialValue: _selectedCategory,
               decoration: _inputDecoration('Category', Icons.category),
               items: Listing.categories
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
