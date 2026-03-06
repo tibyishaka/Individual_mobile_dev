@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import '../models/listing.dart';
@@ -19,14 +18,14 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  final MapController _mapController = MapController();
+  GoogleMapController? _mapController;
   final TextEditingController _searchController = TextEditingController();
 
-  bool _isSatellite = false;
+  MapType _mapType = MapType.normal;
   LatLng? _userLocation;
   LatLng? _searchedLocation;
   String? _searchedName;
-  List<LatLng> _routePoints = [];
+  Set<Polyline> _polylines = {};
   bool _isSearching = false;
   bool _isFetchingRoute = false;
 
@@ -51,7 +50,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     _searchController.dispose();
-    _mapController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -72,6 +71,9 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         _userLocation = LatLng(position.latitude, position.longitude);
       });
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(_userLocation!, 16.0),
+      );
     }
   }
 
@@ -123,10 +125,10 @@ class _MapScreenState extends State<MapScreen> {
       _searchedLocation = point;
       _searchedName = result.name.split(',').first;
       _suggestions = [];
-      _routePoints = [];
+      _polylines = {};
     });
     _searchController.text = _searchedName!;
-    _mapController.move(point, 16.0);
+    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(point, 16.0));
     FocusManager.instance.primaryFocus?.unfocus();
   }
 
@@ -164,13 +166,22 @@ class _MapScreenState extends State<MapScreen> {
             )
             .toList();
 
-        setState(() => _routePoints = routePoints);
+        setState(() {
+          _polylines = {
+            Polyline(
+              polylineId: const PolylineId('route'),
+              points: routePoints,
+              color: Colors.blue,
+              width: 5,
+            ),
+          };
+        });
 
         // Fit map to show entire route
         if (routePoints.isNotEmpty) {
           final bounds = _boundsFromPoints(routePoints);
-          _mapController.fitCamera(
-            CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(60)),
+          _mapController?.animateCamera(
+            CameraUpdate.newLatLngBounds(bounds, 60),
           );
         }
       }
@@ -197,19 +208,100 @@ class _MapScreenState extends State<MapScreen> {
       if (p.longitude < minLng) minLng = p.longitude;
       if (p.longitude > maxLng) maxLng = p.longitude;
     }
-    return LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng));
+    return LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
   }
 
   // ── Clear route and search ──
   void _clearRoute() {
     setState(() {
-      _routePoints = [];
+      _polylines = {};
       _searchedLocation = null;
       _searchedName = null;
       _suggestions = [];
     });
     _searchController.clear();
-    _mapController.move(_rwandaCenter, 9.0);
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(_rwandaCenter, 9.0),
+    );
+  }
+
+  // ── Build all map markers ──
+  Set<Marker> _buildMarkers(BuildContext context) {
+    final markers = <Marker>{};
+
+    // Searched location marker
+    if (_searchedLocation != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('searched'),
+          position: _searchedLocation!,
+          infoWindow: InfoWindow(title: _searchedName ?? 'Destination'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueGreen,
+          ),
+        ),
+      );
+    }
+
+    // Listing markers from Firestore
+    final provider = ListingsScope.of(context);
+    var listings = provider.allListings
+        .where((l) => l.latitude != 0.0 || l.longitude != 0.0)
+        .toList();
+
+    if (_selectedSubcategory != null && _selectedCategoryFilter != null) {
+      listings = listings
+          .where(
+            (l) =>
+                l.category == _selectedCategoryFilter &&
+                l.subcategory == _selectedSubcategory,
+          )
+          .toList();
+    }
+
+    for (final listing in listings) {
+      markers.add(
+        Marker(
+          markerId: MarkerId(listing.id ?? listing.name),
+          position: LatLng(listing.latitude, listing.longitude),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            _categoryHue(listing.category),
+          ),
+          infoWindow: InfoWindow(
+            title: listing.name,
+            snippet: listing.subcategory,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ListingDetailScreen(listing: listing),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return markers;
+  }
+
+  double _categoryHue(String cat) {
+    switch (cat) {
+      case 'Health':
+        return BitmapDescriptor.hueRed;
+      case 'Government':
+        return BitmapDescriptor.hueBlue;
+      case 'Entertainment':
+        return BitmapDescriptor.hueViolet;
+      case 'Education':
+        return BitmapDescriptor.hueOrange;
+      case 'Tourist Attraction':
+        return BitmapDescriptor.hueGreen;
+      default:
+        return BitmapDescriptor.hueMagenta;
+    }
   }
 
   @override
@@ -359,79 +451,22 @@ class _MapScreenState extends State<MapScreen> {
               }),
             ),
 
-          // ── Flutter Map ──
+          // ── Google Map ──
           Expanded(
             child: Stack(
               children: [
-                FlutterMap(
-                  mapController: _mapController,
-                  options: const MapOptions(
-                    initialCenter: _rwandaCenter,
-                    initialZoom: 9.0,
-                    minZoom: 7.0,
-                    maxZoom: 19.0,
+                GoogleMap(
+                  mapType: _mapType,
+                  initialCameraPosition: const CameraPosition(
+                    target: _rwandaCenter,
+                    zoom: 9.0,
                   ),
-                  children: [
-                    // ── Tile Layer ──
-                    TileLayer(
-                      urlTemplate: _isSatellite
-                          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                          : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.kigali.app',
-                      maxZoom: 19,
-                    ),
-
-                    // ── Route Polyline ──
-                    if (_routePoints.isNotEmpty)
-                      PolylineLayer(
-                        polylines: [
-                          Polyline(
-                            points: _routePoints,
-                            color: Colors.blue,
-                            strokeWidth: 5.0,
-                          ),
-                        ],
-                      ),
-
-                    // ── Listing markers from Firestore ──
-                    _ListingMarkersLayer(
-                      subcategoryFilter: _selectedSubcategory,
-                      categoryFilter: _selectedCategoryFilter,
-                    ),
-
-                    // ── User / search markers ──
-                    MarkerLayer(
-                      markers: [
-                        if (_userLocation != null)
-                          Marker(
-                            point: _userLocation!,
-                            width: 20,
-                            height: 20,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        if (_searchedLocation != null)
-                          Marker(
-                            point: _searchedLocation!,
-                            width: 40,
-                            height: 40,
-                            child: const Icon(
-                              Icons.location_on,
-                              color: Color(0xFF2ECC71),
-                              size: 40,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
+                  onMapCreated: (controller) => _mapController = controller,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: false,
+                  markers: _buildMarkers(context),
+                  polylines: _polylines,
                 ),
 
                 // ── Map control buttons (top-right) ──
@@ -442,12 +477,17 @@ class _MapScreenState extends State<MapScreen> {
                     children: [
                       // Toggle street / satellite
                       _MapButton(
-                        icon: _isSatellite ? Icons.map : Icons.satellite,
-                        tooltip: _isSatellite
+                        icon: _mapType == MapType.satellite
+                            ? Icons.map
+                            : Icons.satellite,
+                        tooltip: _mapType == MapType.satellite
                             ? 'Street View'
                             : 'Satellite View',
-                        onTap: () =>
-                            setState(() => _isSatellite = !_isSatellite),
+                        onTap: () => setState(() {
+                          _mapType = _mapType == MapType.normal
+                              ? MapType.satellite
+                              : MapType.normal;
+                        }),
                       ),
                       const SizedBox(height: 8),
 
@@ -458,7 +498,9 @@ class _MapScreenState extends State<MapScreen> {
                         onTap: () async {
                           await _determinePosition();
                           if (_userLocation != null) {
-                            _mapController.move(_userLocation!, 16.0);
+                            _mapController?.animateCamera(
+                              CameraUpdate.newLatLngZoom(_userLocation!, 16.0),
+                            );
                           }
                         },
                       ),
@@ -529,72 +571,6 @@ class _MapButton extends StatelessWidget {
           child: Icon(icon, size: 22),
         ),
       ),
-    );
-  }
-}
-
-// ── Listing markers pulled from ListingsProvider ──
-class _ListingMarkersLayer extends StatelessWidget {
-  final String? subcategoryFilter;
-  final String? categoryFilter;
-  const _ListingMarkersLayer({this.subcategoryFilter, this.categoryFilter});
-
-  Color _categoryColor(String cat) {
-    switch (cat) {
-      case 'Health':
-        return Colors.red;
-      case 'Government':
-        return Colors.blue;
-      case 'Entertainment':
-        return Colors.purple;
-      case 'Education':
-        return Colors.orange;
-      case 'Tourist Attraction':
-        return Colors.green;
-      default:
-        return Colors.deepPurple;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final provider = ListingsScope.of(context);
-    var listings = provider.allListings
-        .where((l) => l.latitude != 0.0 || l.longitude != 0.0)
-        .toList();
-
-    // Apply subcategory filter when one is active
-    if (subcategoryFilter != null && categoryFilter != null) {
-      listings = listings
-          .where(
-            (l) =>
-                l.category == categoryFilter &&
-                l.subcategory == subcategoryFilter,
-          )
-          .toList();
-    }
-
-    return MarkerLayer(
-      markers: listings.map((listing) {
-        return Marker(
-          point: LatLng(listing.latitude, listing.longitude),
-          width: 36,
-          height: 36,
-          child: GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ListingDetailScreen(listing: listing),
-              ),
-            ),
-            child: Icon(
-              Icons.location_on,
-              color: _categoryColor(listing.category),
-              size: 36,
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 }
