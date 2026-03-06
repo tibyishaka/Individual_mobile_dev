@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'settings.dart';
 import 'category.dart';
 
@@ -47,9 +48,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Center(child: const Text('Welcome to Kigali')),
+        title: Center(child: Text(l10n?.homeWelcome ?? 'Welcome to Kigali')),
         leading: IconButton(
           icon: const Icon(Icons.settings),
           onPressed: () {
@@ -66,9 +68,10 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: const Text(
-                'Discover Kigali',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              child: Text(
+                l10n?.homeDiscover ?? 'Discover Kigali',
+                style: const TextStyle(
+                    fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 12),
@@ -116,6 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildCategoryButton(
               context,
               'Health',
+              l10n?.catHealth ?? 'Health',
               Icons.local_hospital,
               Colors.red,
             ),
@@ -123,6 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildCategoryButton(
               context,
               'Government',
+              l10n?.catGovernment ?? 'Government',
               Icons.account_balance,
               Colors.blue,
             ),
@@ -130,6 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildCategoryButton(
               context,
               'Entertainment',
+              l10n?.catEntertainment ?? 'Entertainment',
               Icons.movie,
               Colors.purple,
             ),
@@ -137,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildCategoryButton(
               context,
               'Education',
+              l10n?.catEducation ?? 'Education',
               Icons.school,
               Colors.orange,
             ),
@@ -144,6 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildCategoryButton(
               context,
               'Tourist Attraction',
+              l10n?.catTourist ?? 'Tourist Attraction',
               Icons.tour,
               Colors.green,
             ),
@@ -155,7 +163,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCategoryButton(
     BuildContext context,
-    String title,
+    String categoryKey,
+    String label,
     IconData icon,
     Color color,
   ) {
@@ -171,12 +180,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         icon: Icon(icon),
-        label: Text(title, style: const TextStyle(fontSize: 18)),
+        label: Text(label, style: const TextStyle(fontSize: 18)),
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => CategoryScreen(title: title),
+              builder: (context) => CategoryScreen(title: categoryKey),
             ),
           );
         },

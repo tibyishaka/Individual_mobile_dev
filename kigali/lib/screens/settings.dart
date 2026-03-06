@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/listings_provider.dart';
 import '../providers/settings_provider.dart';
 import 'sign_in.dart';
@@ -11,9 +12,11 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = SettingsScope.of(context);
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings'), centerTitle: true),
+      appBar: AppBar(
+          title: Text(l10n?.settingsTitle ?? 'Settings'), centerTitle: true),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
@@ -22,38 +25,42 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 16),
 
           // ── Appearance Section ──
-          _SectionHeader(title: 'Appearance', theme: theme),
+          _SectionHeader(title: l10n?.appearance ?? 'Appearance', theme: theme),
           _ThemeTile(settings: settings, theme: theme),
           const Divider(height: 1, indent: 16, endIndent: 16),
 
           // ── Notifications Section ──
-          _SectionHeader(title: 'Notifications', theme: theme),
+          _SectionHeader(
+              title: l10n?.notifications ?? 'Notifications', theme: theme),
           SwitchListTile(
             secondary: Icon(
               Icons.notifications_outlined,
               color: theme.colorScheme.primary,
             ),
-            title: const Text('Notifications'),
-            subtitle: const Text('Enable push notifications'),
+            title: Text(l10n?.notifications ?? 'Notifications'),
+            subtitle:
+                Text(l10n?.notificationsDesc ?? 'Enable push notifications'),
             value: settings.notificationsEnabled,
             onChanged: (value) => settings.setNotificationsEnabled(value),
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
 
           // ── Language Section ──
-          _SectionHeader(title: 'Language', theme: theme),
+          _SectionHeader(title: l10n?.language ?? 'Language', theme: theme),
           _LanguageTile(settings: settings, theme: theme),
           const Divider(height: 1, indent: 16, endIndent: 16),
 
           // ── Location Section ──
-          _SectionHeader(title: 'Location', theme: theme),
+          _SectionHeader(title: l10n?.location ?? 'Location', theme: theme),
           SwitchListTile(
             secondary: Icon(
               Icons.my_location,
               color: theme.colorScheme.primary,
             ),
-            title: const Text('Use Current Location'),
-            subtitle: const Text('Allow the app to access device location'),
+            title: Text(l10n?.useCurrentLocation ?? 'Use Current Location'),
+            subtitle: Text(
+                l10n?.useLocationDesc ??
+                    'Allow the app to access device location'),
             value: settings.useLocation,
             onChanged: (value) => settings.setUseLocation(value),
           ),
@@ -64,9 +71,11 @@ class SettingsScreen extends StatelessWidget {
                   ? theme.colorScheme.primary
                   : theme.disabledColor,
             ),
-            title: const Text('Location Notifications'),
-            subtitle: const Text(
-              'Receive notifications based on your location',
+            title:
+                Text(l10n?.locationNotifs ?? 'Location Notifications'),
+            subtitle: Text(
+              l10n?.locationNotifsDesc ??
+                  'Receive notifications based on your location',
             ),
             value: settings.locationNotifications,
             onChanged: settings.useLocation && settings.notificationsEnabled
@@ -76,7 +85,8 @@ class SettingsScreen extends StatelessWidget {
           const Divider(height: 1, indent: 16, endIndent: 16),
 
           // ── Account Section ──
-          _SectionHeader(title: 'Account', theme: theme),
+          _SectionHeader(
+              title: l10n?.account ?? 'Account', theme: theme),
           StreamBuilder<User?>(
             stream: FirebaseAuth.instance.userChanges(),
             builder: (_, snap) {
@@ -86,7 +96,7 @@ class SettingsScreen extends StatelessWidget {
                   Icons.email_outlined,
                   color: theme.colorScheme.primary,
                 ),
-                title: const Text('Email'),
+                title: Text(l10n?.email ?? 'Email'),
                 subtitle: Text(
                   email.isNotEmpty ? email : '—',
                   style: theme.textTheme.bodySmall,
@@ -97,16 +107,16 @@ class SettingsScreen extends StatelessWidget {
           const Divider(height: 1, indent: 16, endIndent: 16),
 
           // ── More Section ──
-          _SectionHeader(title: 'More', theme: theme),
+          _SectionHeader(title: l10n?.more ?? 'More', theme: theme),
           _SettingsTile(
             icon: Icons.info_outline,
-            title: 'About',
-            subtitle: 'Version 1.0.0',
+            title: l10n?.about ?? 'About',
+            subtitle: l10n?.version ?? 'Version 1.0.0',
             theme: theme,
           ),
           _SettingsTile(
             icon: Icons.description_outlined,
-            title: 'Terms & Privacy',
+            title: l10n?.termsPrivacy ?? 'Terms & Privacy',
             theme: theme,
           ),
           const SizedBox(height: 24),
@@ -125,7 +135,7 @@ class SettingsScreen extends StatelessWidget {
                 }
               },
               icon: const Icon(Icons.logout),
-              label: const Text('Log Out'),
+              label: Text(l10n?.logOut ?? 'Log Out'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red,
                 side: const BorderSide(color: Colors.red),
@@ -196,7 +206,10 @@ class _ProfileCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        displayName.isNotEmpty ? displayName : 'No name set',
+                        displayName.isNotEmpty
+                            ? displayName
+                            : (AppLocalizations.of(context)?.noNameSet ??
+                                'No name set'),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -220,7 +233,8 @@ class _ProfileCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Edit'),
+                  child: Text(
+                      AppLocalizations.of(context)?.edit ?? 'Edit'),
                 ),
               ],
             ),
@@ -236,6 +250,7 @@ class _ProfileCard extends StatelessWidget {
     String currentName,
   ) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final nameController = TextEditingController(text: currentName);
     bool isSaving = false;
 
@@ -267,14 +282,15 @@ class _ProfileCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Text('Edit Profile', style: theme.textTheme.titleLarge),
+                  Text(l10n?.editProfile ?? 'Edit Profile',
+                      style: theme.textTheme.titleLarge),
                   const SizedBox(height: 24),
                   TextField(
                     controller: nameController,
                     textCapitalization: TextCapitalization.words,
                     decoration: InputDecoration(
-                      labelText: 'Display Name',
-                      hintText: 'Your full name',
+                      labelText: l10n?.displayName ?? 'Display Name',
+                      hintText: l10n?.yourFullName ?? 'Your full name',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -313,7 +329,7 @@ class _ProfileCard extends StatelessWidget {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('Save Changes'),
+                        : Text(l10n?.saveChanges ?? 'Save Changes'),
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -360,10 +376,11 @@ class _ThemeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final labels = {
-      ThemeMode.system: 'System',
-      ThemeMode.light: 'Light',
-      ThemeMode.dark: 'Dark',
+      ThemeMode.system: l10n?.themeSystem ?? 'System',
+      ThemeMode.light: l10n?.themeLight ?? 'Light',
+      ThemeMode.dark: l10n?.themeDark ?? 'Dark',
     };
 
     return ListTile(
@@ -371,7 +388,7 @@ class _ThemeTile extends StatelessWidget {
         _iconForMode(settings.themeMode),
         color: theme.colorScheme.primary,
       ),
-      title: const Text('Theme'),
+      title: Text(l10n?.theme ?? 'Theme'),
       subtitle: Text(labels[settings.themeMode]!),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
@@ -405,6 +422,7 @@ class _ThemePickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -420,15 +438,18 @@ class _ThemePickerSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text('Choose Theme', style: theme.textTheme.titleLarge),
+          Text(l10n?.chooseTheme ?? 'Choose Theme',
+              style: theme.textTheme.titleLarge),
           const SizedBox(height: 16),
-          _themeOption(context, ThemeMode.light, Icons.light_mode, 'Light'),
-          _themeOption(context, ThemeMode.dark, Icons.dark_mode, 'Dark'),
+          _themeOption(context, ThemeMode.light, Icons.light_mode,
+              l10n?.themeLight ?? 'Light'),
+          _themeOption(context, ThemeMode.dark, Icons.dark_mode,
+              l10n?.themeDark ?? 'Dark'),
           _themeOption(
             context,
             ThemeMode.system,
             Icons.brightness_auto,
-            'System Default',
+            l10n?.themeSystemDefault ?? 'System Default',
           ),
           const SizedBox(height: 8),
         ],
@@ -490,9 +511,10 @@ class _LanguageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return ListTile(
       leading: Icon(Icons.language, color: theme.colorScheme.primary),
-      title: const Text('Language'),
+      title: Text(l10n?.language ?? 'Language'),
       subtitle: Text(_currentLanguageName()),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
@@ -524,6 +546,7 @@ class _LanguagePickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -539,13 +562,15 @@ class _LanguagePickerSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text('Choose Language', style: theme.textTheme.titleLarge),
+          Text(l10n?.chooseLanguage ?? 'Choose Language',
+              style: theme.textTheme.titleLarge),
           const SizedBox(height: 16),
           ...languages.map((lang) {
             final isSelected =
                 settings.locale.languageCode == lang.locale.languageCode;
             return ListTile(
-              leading: Text(lang.flag, style: const TextStyle(fontSize: 24)),
+              leading:
+                  Text(lang.flag, style: const TextStyle(fontSize: 24)),
               title: Text(lang.name),
               trailing: isSelected
                   ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
@@ -554,9 +579,8 @@ class _LanguagePickerSheet extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               selected: isSelected,
-              selectedTileColor: theme.colorScheme.primaryContainer.withAlpha(
-                60,
-              ),
+              selectedTileColor:
+                  theme.colorScheme.primaryContainer.withAlpha(60),
               onTap: () {
                 settings.setLocale(lang.locale);
                 Navigator.pop(context);

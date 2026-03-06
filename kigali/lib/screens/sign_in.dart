@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../main_navigation.dart';
 import 'register.dart';
 
@@ -40,9 +41,11 @@ class _SignInScreenState extends State<SignInScreen> {
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(_authError(e.code))));
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(l10n?.signInError(e.code) ?? _fallbackError(e.code))),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -50,10 +53,13 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _forgotPassword() async {
+    final l10n = AppLocalizations.of(context);
     final email = _emailController.text.trim();
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter your email address first')),
+        SnackBar(
+            content: Text(
+                l10n?.enterEmailFirst ?? 'Enter your email address first')),
       );
       return;
     }
@@ -61,19 +67,23 @@ class _SignInScreenState extends State<SignInScreen> {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password reset email sent!')),
+          SnackBar(
+              content: Text(
+                  l10n?.resetEmailSent ?? 'Password reset email sent!')),
         );
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(_authError(e.code))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  l10n?.signInError(e.code) ?? _fallbackError(e.code))),
+        );
       }
     }
   }
 
-  String _authError(String code) {
+  String _fallbackError(String code) {
     switch (code) {
       case 'user-not-found':
       case 'invalid-credential':
@@ -94,6 +104,7 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -121,7 +132,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                   Text(
-                    'City Guide',
+                    l10n?.cityGuide ?? 'City Guide',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -135,7 +146,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
-                      labelText: 'Email',
+                      labelText: l10n?.email ?? 'Email',
                       prefixIcon: const Icon(Icons.email_outlined),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -143,9 +154,11 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
-                        return 'Email is required';
+                        return l10n?.emailRequired ?? 'Email is required';
                       }
-                      if (!v.contains('@')) return 'Enter a valid email';
+                      if (!v.contains('@')) {
+                        return l10n?.enterValidEmail ?? 'Enter a valid email';
+                      }
                       return null;
                     },
                   ),
@@ -158,7 +171,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _signIn(),
                     decoration: InputDecoration(
-                      labelText: 'Password',
+                      labelText: l10n?.password ?? 'Password',
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -174,8 +187,9 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                       ),
                     ),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Password is required' : null,
+                    validator: (v) => v == null || v.isEmpty
+                        ? (l10n?.passwordRequired ?? 'Password is required')
+                        : null,
                   ),
 
                   // ── Forgot password ──
@@ -183,7 +197,8 @@ class _SignInScreenState extends State<SignInScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: _forgotPassword,
-                      child: const Text('Forgot password?'),
+                      child: Text(
+                          l10n?.forgotPassword ?? 'Forgot password?'),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -206,7 +221,8 @@ class _SignInScreenState extends State<SignInScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('Sign In', style: TextStyle(fontSize: 16)),
+                        : Text(l10n?.signIn ?? 'Sign In',
+                            style: const TextStyle(fontSize: 16)),
                   ),
                   const SizedBox(height: 28),
 
@@ -215,7 +231,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Don't have an account?  ",
+                        '${l10n?.noAccount ?? "Don't have an account?"}  ',
                         style: TextStyle(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -228,7 +244,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                         ),
                         child: Text(
-                          'Register',
+                          l10n?.register ?? 'Register',
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontWeight: FontWeight.w600,

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../main_navigation.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -56,16 +57,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(_authError(e.code))));
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  l10n?.registerError(e.code) ?? _fallbackError(e.code))),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  String _authError(String code) {
+  String _fallbackError(String code) {
     switch (code) {
       case 'email-already-in-use':
         return 'An account already exists for this email.';
@@ -83,8 +87,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account'), centerTitle: true),
+      appBar: AppBar(
+          title: Text(l10n?.createAccount ?? 'Create Account'),
+          centerTitle: true),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -95,7 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Join Kigali',
+                    l10n?.joinKigali ?? 'Join Kigali',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
@@ -103,7 +110,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Create an account to add and manage listings',
+                    l10n?.joinSubtitle ??
+                        'Create an account to add and manage listings',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -117,14 +125,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textInputAction: TextInputAction.next,
                     textCapitalization: TextCapitalization.words,
                     decoration: InputDecoration(
-                      labelText: 'Full Name',
+                      labelText: l10n?.fullName ?? 'Full Name',
                       prefixIcon: const Icon(Icons.person_outline),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     validator: (v) => v == null || v.trim().isEmpty
-                        ? 'Name is required'
+                        ? (l10n?.nameRequired ?? 'Name is required')
                         : null,
                   ),
                   const SizedBox(height: 16),
@@ -135,7 +143,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
-                      labelText: 'Email',
+                      labelText: l10n?.email ?? 'Email',
                       prefixIcon: const Icon(Icons.email_outlined),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -143,9 +151,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
-                        return 'Email is required';
+                        return l10n?.emailRequired ?? 'Email is required';
                       }
-                      if (!v.contains('@')) return 'Enter a valid email';
+                      if (!v.contains('@')) {
+                        return l10n?.enterValidEmail ?? 'Enter a valid email';
+                      }
                       return null;
                     },
                   ),
@@ -157,7 +167,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
-                      labelText: 'Password',
+                      labelText: l10n?.password ?? 'Password',
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -174,9 +184,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Password is required';
+                      if (v == null || v.isEmpty) {
+                        return l10n?.passwordRequired ?? 'Password is required';
+                      }
                       if (v.length < 6) {
-                        return 'At least 6 characters required';
+                        return l10n?.min6Chars ??
+                            'At least 6 characters required';
                       }
                       return null;
                     },
@@ -190,7 +203,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _register(),
                     decoration: InputDecoration(
-                      labelText: 'Confirm Password',
+                      labelText: l10n?.confirmPassword ?? 'Confirm Password',
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -207,10 +220,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     validator: (v) {
                       if (v == null || v.isEmpty) {
-                        return 'Please confirm your password';
+                        return l10n?.confirmPasswordReq ??
+                            'Please confirm your password';
                       }
                       if (v != _passwordController.text) {
-                        return 'Passwords do not match';
+                        return l10n?.passwordsNoMatch ??
+                            'Passwords do not match';
                       }
                       return null;
                     },
@@ -235,9 +250,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Create Account',
-                            style: TextStyle(fontSize: 16),
+                        : Text(
+                            l10n?.createAccount ?? 'Create Account',
+                            style: const TextStyle(fontSize: 16),
                           ),
                   ),
                   const SizedBox(height: 24),
@@ -247,7 +262,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Already have an account?  ',
+                        '${l10n?.alreadyAccount ?? "Already have an account?"}  ',
                         style: TextStyle(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -255,7 +270,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
                         child: Text(
-                          'Sign In',
+                          l10n?.signIn ?? 'Sign In',
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontWeight: FontWeight.w600,

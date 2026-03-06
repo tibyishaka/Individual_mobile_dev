@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/listing.dart';
 import '../providers/listings_provider.dart';
 import 'listing_detail.dart';
@@ -18,6 +19,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
   Widget build(BuildContext context) {
     final provider = ListingsScope.of(context);
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     final listings = provider.allListings
         .where((l) => l.category == widget.title)
@@ -29,14 +31,17 @@ class _CategoryScreenState extends State<CategoryScreen> {
         .toList();
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title), centerTitle: true),
+      appBar: AppBar(
+        title: Text(l10n?.categoryLabel(widget.title) ?? widget.title),
+        centerTitle: true,
+      ),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search ${widget.title}...',
+                hintText: l10n?.searchHint ?? 'Search...',
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: theme.colorScheme.surfaceContainerHighest.withAlpha(
@@ -66,7 +71,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'No ${widget.title} listings found',
+                      l10n?.noListings ?? 'No ${widget.title} listings found',
                       style: TextStyle(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
