@@ -1,1 +1,0 @@
-# Individual_mobile_dev
