@@ -1,8 +1,6 @@
 # Kigali City Guide
 
-A Flutter-based city directory and guide application for Kigali, Rwanda. Users can discover, browse, and add local listings across five key categories, view them on an interactive map, get driving directions, read and write reviews, and manage their own submissions — all in six languages.
-
----
+A Flutter-based city directory and guide application for Kigali, Rwanda. Users can discover, browse, and add local listings across five key categories, view them on an interactive map, get driving directions, read and write reviews, and manage their own submissions all in six languages.
 
 ## Features
 
@@ -17,7 +15,7 @@ A Flutter-based city directory and guide application for Kigali, Rwanda. Users c
 - Full-screen Google Map centred on Kigali
 - Colour-coded markers per category, filterable by category/subcategory chips
 - Live place search powered by the free [Nominatim OSM API](https://nominatim.openstreetmap.org) (no API key required)
-- Driving route planning via [OSRM](https://router.project-osrm.org) drawn as a polyline — no billing required
+- Driving route planning via [OSRM](https://router.project-osrm.org) drawn as a polyline  no billing required
 - Camera animates to the user's GPS location
 - Street view / satellite map type toggle
 
@@ -52,7 +50,7 @@ A Flutter-based city directory and guide application for Kigali, Rwanda. Users c
 ## Tech Stack
 
 ### Framework & Language
-- **Flutter** (Dart) — multi-platform (Android, iOS, Web, macOS, Windows)
+- **Flutter** (Dart)  multi-platform (Android, iOS, Web, macOS, Windows)
 
 ### Backend / Cloud
 | Service | Purpose |
@@ -74,7 +72,16 @@ A Flutter-based city directory and guide application for Kigali, Rwanda. Users c
 | `flutter_localizations` | i18n framework delegates |
 
 ### State Management
-Custom `ChangeNotifier` + `InheritedNotifier` pattern (`ListingsScope` and `SettingsScope`) — no third-party state management library.
+No third-party state management library is used. The app relies entirely on Flutter's built-in primitives:
+
+| Class | Role |
+|---|---|
+| `ListingsProvider` (extends `ChangeNotifier`) | Owns all Firestore data: the listings list, active search query, selected category filter, loading/error state, and methods for CRUD, reviews, and user-profile updates. |
+| `SettingsProvider` (extends `ChangeNotifier`) | Owns all user preferences: theme mode, locale, notification toggles, and location permission state. Persists every setting via `SharedPreferences`. |
+| `ListingsScope` (extends `InheritedNotifier<ListingsProvider>`) | Propagates `ListingsProvider` down the widget tree without requiring a package dependency. Widgets call `ListingsScope.of(context)` to read or mutate listings state. |
+| `SettingsScope` (extends `InheritedNotifier<SettingsProvider>`) | Propagates `SettingsProvider` the same way, scoping theme and locale changes to the entire `MaterialApp`. |
+
+Both providers are instantiated once in `main.dart` and injected at the root of the widget tree. The Firestore real-time listener inside `ListingsProvider` is started/stopped in response to `FirebaseAuth.authStateChanges()`, preventing data leaks when the user signs out.
 
 ---
 
