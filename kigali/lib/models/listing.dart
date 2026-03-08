@@ -130,6 +130,8 @@ class Listing {
       'Playgrounds',
       'Cinemas',
       'Nightlife',
+      'Markets',
+      'Supermarkets',
     ],
     'Education': [
       'Schools',

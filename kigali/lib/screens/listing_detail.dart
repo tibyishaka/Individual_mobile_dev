@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../localisation/app_localizations.dart';
 import '../models/listing.dart';
 import '../models/review.dart';
 import '../providers/listings_provider.dart';
@@ -25,7 +27,7 @@ class ListingDetailScreen extends StatelessWidget {
             expandedHeight: listing.imageUrl != null ? 240 : 160,
             pinned: true,
             actions: [
-              if (isOwner)
+              if (isOwner) ...[
                 IconButton(
                   icon: const Icon(Icons.edit),
                   onPressed: () => Navigator.push(
@@ -35,6 +37,12 @@ class ListingDetailScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  tooltip: 'Delete listing',
+                  onPressed: () => _confirmDelete(context, provider),
+                ),
+              ],
             ],
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
@@ -125,10 +133,7 @@ class ListingDetailScreen extends StatelessWidget {
                         height: 180,
                         child: GoogleMap(
                           initialCameraPosition: CameraPosition(
-                            target: LatLng(
-                              listing.latitude,
-                              listing.longitude,
-                            ),
+                            target: LatLng(listing.latitude, listing.longitude),
                             zoom: 15,
                           ),
                           markers: {
@@ -173,6 +178,34 @@ class ListingDetailScreen extends StatelessWidget {
     );
   }
 
+  void _confirmDelete(BuildContext context, ListingsProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deleteListingTitle),
+        content: Text(l10n.deleteConfirmMsg(listing.name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancelLabel),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(ctx); // close dialog
+              await provider.deleteListing(listing);
+              if (context.mounted) Navigator.pop(context); // go back
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(l10n.deleteLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _launchPhone(BuildContext context, String number) async {
     final uri = Uri.parse('tel:${number.replaceAll(' ', '')}');
     if (!await launchUrl(uri)) {
@@ -185,8 +218,29 @@ class ListingDetailScreen extends StatelessWidget {
   }
 
   Future<void> _launchDirections(BuildContext context, Listing l) async {
+    String originParam = '';
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (serviceEnabled) {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission != LocationPermission.denied &&
+            permission != LocationPermission.deniedForever) {
+          final pos = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.high,
+            ),
+          );
+          originParam = '&origin=${pos.latitude},${pos.longitude}';
+        }
+      }
+    } catch (_) {}
+
     final uri = Uri.parse(
       'https://www.google.com/maps/dir/?api=1'
+      '$originParam'
       '&destination=${l.latitude},${l.longitude}&travelmode=driving',
     );
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {

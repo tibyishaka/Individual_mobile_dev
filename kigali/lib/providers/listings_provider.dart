@@ -49,6 +49,7 @@ class ListingsProvider extends ChangeNotifier {
     _subscription?.cancel();
     _subscription = _firestore
         .collection('listings')
+        .where('createdBy', isEqualTo: currentUserId)
         .orderBy('timestamp', descending: true)
         .snapshots()
         .listen(

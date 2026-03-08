@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import '../localisation/app_localizations.dart';
 import '../models/listing.dart';
 import '../providers/listings_provider.dart';
 
@@ -256,7 +257,14 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
               value: _selectedSubcategory,
               decoration: _inputDecoration('Subcategory', Icons.label_outline),
               items: (Listing.subcategories[_selectedCategory] ?? [])
-                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .map(
+                    (s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(
+                        AppLocalizations.of(context)?.subcategoryLabel(s) ?? s,
+                      ),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => _selectedSubcategory = v),
               validator: (v) =>

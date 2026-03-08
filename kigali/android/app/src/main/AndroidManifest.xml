@@ -9,6 +9,8 @@
         android:label="kigali"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Required by Google Maps SDK on Android 9+ -->
+        <uses-library android:name="org.apache.http.legacy" android:required="false"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

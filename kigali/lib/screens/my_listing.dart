@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../localisation/app_localizations.dart';
 import '../models/listing.dart';
 import '../providers/listings_provider.dart';
 import 'listing_detail.dart';
@@ -446,15 +447,16 @@ class _ListingCard extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Listing'),
-        content: Text('Delete "${listing.name}"? This cannot be undone.'),
+        title: Text(l10n.deleteListingTitle),
+        content: Text(l10n.deleteConfirmMsg(listing.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancelLabel),
           ),
           FilledButton(
             onPressed: () {
@@ -464,7 +466,7 @@ class _ListingCard extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Delete'),
+            child: Text(l10n.deleteLabel),
           ),
         ],
       ),

@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../localisation/app_localizations.dart';
 import '../providers/listings_provider.dart';
 import '../providers/settings_provider.dart';
@@ -16,7 +19,9 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          title: Text(l10n?.settingsTitle ?? 'Settings'), centerTitle: true),
+        title: Text(l10n?.settingsTitle ?? 'Settings'),
+        centerTitle: true,
+      ),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
@@ -31,15 +36,18 @@ class SettingsScreen extends StatelessWidget {
 
           // ── Notifications Section ──
           _SectionHeader(
-              title: l10n?.notifications ?? 'Notifications', theme: theme),
+            title: l10n?.notifications ?? 'Notifications',
+            theme: theme,
+          ),
           SwitchListTile(
             secondary: Icon(
               Icons.notifications_outlined,
               color: theme.colorScheme.primary,
             ),
             title: Text(l10n?.notifications ?? 'Notifications'),
-            subtitle:
-                Text(l10n?.notificationsDesc ?? 'Enable push notifications'),
+            subtitle: Text(
+              l10n?.notificationsDesc ?? 'Enable push notifications',
+            ),
             value: settings.notificationsEnabled,
             onChanged: (value) => settings.setNotificationsEnabled(value),
           ),
@@ -59,8 +67,9 @@ class SettingsScreen extends StatelessWidget {
             ),
             title: Text(l10n?.useCurrentLocation ?? 'Use Current Location'),
             subtitle: Text(
-                l10n?.useLocationDesc ??
-                    'Allow the app to access device location'),
+              l10n?.useLocationDesc ??
+                  'Allow the app to access device location',
+            ),
             value: settings.useLocation,
             onChanged: (value) => settings.setUseLocation(value),
           ),
@@ -71,8 +80,7 @@ class SettingsScreen extends StatelessWidget {
                   ? theme.colorScheme.primary
                   : theme.disabledColor,
             ),
-            title:
-                Text(l10n?.locationNotifs ?? 'Location Notifications'),
+            title: Text(l10n?.locationNotifs ?? 'Location Notifications'),
             subtitle: Text(
               l10n?.locationNotifsDesc ??
                   'Receive notifications based on your location',
@@ -85,8 +93,7 @@ class SettingsScreen extends StatelessWidget {
           const Divider(height: 1, indent: 16, endIndent: 16),
 
           // ── Account Section ──
-          _SectionHeader(
-              title: l10n?.account ?? 'Account', theme: theme),
+          _SectionHeader(title: l10n?.account ?? 'Account', theme: theme),
           StreamBuilder<User?>(
             stream: FirebaseAuth.instance.userChanges(),
             builder: (_, snap) {
@@ -118,6 +125,7 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.description_outlined,
             title: l10n?.termsPrivacy ?? 'Terms & Privacy',
             theme: theme,
+            onTap: () => _showTermsPrivacySheet(context),
           ),
           const SizedBox(height: 24),
 
@@ -156,12 +164,53 @@ class SettingsScreen extends StatelessWidget {
 // ──────────────────────────────────────────────
 //  Profile Card
 // ──────────────────────────────────────────────
-class _ProfileCard extends StatelessWidget {
+class _ProfileCard extends StatefulWidget {
   final ThemeData theme;
   const _ProfileCard({required this.theme});
 
   @override
+  State<_ProfileCard> createState() => _ProfileCardState();
+}
+
+class _ProfileCardState extends State<_ProfileCard> {
+  bool _isUploadingPhoto = false;
+
+  Future<void> _pickAndUploadPhoto() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => _isUploadingPhoto = true);
+    try {
+      final ref = FirebaseStorage.instance.ref().child(
+        'user_photos/${user.uid}.jpg',
+      );
+      await ref.putFile(File(picked.path));
+      final url = await ref.getDownloadURL();
+      await user.updatePhotoURL(url);
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to update photo: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final theme = widget.theme;
     final provider = ListingsScope.of(context);
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.userChanges(),
@@ -178,6 +227,7 @@ class _ProfileCard extends StatelessWidget {
                   .map((w) => w[0].toUpperCase())
                   .join()
             : (email.isNotEmpty ? email[0].toUpperCase() : '?');
+        final photoUrl = user?.photoURL;
 
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -190,14 +240,51 @@ class _ProfileCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Text(
-                    initials,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
+                GestureDetector(
+                  onTap: _isUploadingPhoto ? null : _pickAndUploadPhoto,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 36,
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        backgroundImage: photoUrl != null
+                            ? NetworkImage(photoUrl)
+                            : null,
+                        child: photoUrl == null
+                            ? Text(
+                                initials,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                ),
+                              )
+                            : null,
+                      ),
+                      if (_isUploadingPhoto)
+                        const Positioned.fill(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: theme.colorScheme.surface,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 12,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -209,7 +296,7 @@ class _ProfileCard extends StatelessWidget {
                         displayName.isNotEmpty
                             ? displayName
                             : (AppLocalizations.of(context)?.noNameSet ??
-                                'No name set'),
+                                  'No name set'),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -233,8 +320,7 @@ class _ProfileCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(
-                      AppLocalizations.of(context)?.edit ?? 'Edit'),
+                  child: Text(AppLocalizations.of(context)?.edit ?? 'Edit'),
                 ),
               ],
             ),
@@ -282,8 +368,10 @@ class _ProfileCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Text(l10n?.editProfile ?? 'Edit Profile',
-                      style: theme.textTheme.titleLarge),
+                  Text(
+                    l10n?.editProfile ?? 'Edit Profile',
+                    style: theme.textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 24),
                   TextField(
                     controller: nameController,
@@ -438,13 +526,23 @@ class _ThemePickerSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text(l10n?.chooseTheme ?? 'Choose Theme',
-              style: theme.textTheme.titleLarge),
+          Text(
+            l10n?.chooseTheme ?? 'Choose Theme',
+            style: theme.textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
-          _themeOption(context, ThemeMode.light, Icons.light_mode,
-              l10n?.themeLight ?? 'Light'),
-          _themeOption(context, ThemeMode.dark, Icons.dark_mode,
-              l10n?.themeDark ?? 'Dark'),
+          _themeOption(
+            context,
+            ThemeMode.light,
+            Icons.light_mode,
+            l10n?.themeLight ?? 'Light',
+          ),
+          _themeOption(
+            context,
+            ThemeMode.dark,
+            Icons.dark_mode,
+            l10n?.themeDark ?? 'Dark',
+          ),
           _themeOption(
             context,
             ThemeMode.system,
@@ -562,15 +660,16 @@ class _LanguagePickerSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text(l10n?.chooseLanguage ?? 'Choose Language',
-              style: theme.textTheme.titleLarge),
+          Text(
+            l10n?.chooseLanguage ?? 'Choose Language',
+            style: theme.textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
           ...languages.map((lang) {
             final isSelected =
                 settings.locale.languageCode == lang.locale.languageCode;
             return ListTile(
-              leading:
-                  Text(lang.flag, style: const TextStyle(fontSize: 24)),
+              leading: Text(lang.flag, style: const TextStyle(fontSize: 24)),
               title: Text(lang.name),
               trailing: isSelected
                   ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
@@ -579,8 +678,9 @@ class _LanguagePickerSheet extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               selected: isSelected,
-              selectedTileColor:
-                  theme.colorScheme.primaryContainer.withAlpha(60),
+              selectedTileColor: theme.colorScheme.primaryContainer.withAlpha(
+                60,
+              ),
               onTap: () {
                 settings.setLocale(lang.locale);
                 Navigator.pop(context);
@@ -602,11 +702,13 @@ class _SettingsTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final ThemeData theme;
+  final VoidCallback? onTap;
   const _SettingsTile({
     required this.icon,
     required this.title,
     this.subtitle,
     required this.theme,
+    this.onTap,
   });
 
   @override
@@ -615,6 +717,189 @@ class _SettingsTile extends StatelessWidget {
       leading: Icon(icon, color: theme.colorScheme.primary),
       title: Text(title),
       subtitle: subtitle != null ? Text(subtitle!) : null,
+      trailing: onTap != null ? const Icon(Icons.chevron_right) : null,
+      onTap: onTap,
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+//  Terms & Privacy bottom sheet
+// ──────────────────────────────────────────────
+void _showTermsPrivacySheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => const _TermsPrivacySheet(),
+  );
+}
+
+class _TermsPrivacySheet extends StatelessWidget {
+  const _TermsPrivacySheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.85,
+      maxChildSize: 0.95,
+      minChildSize: 0.5,
+      builder: (_, controller) => Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurfaceVariant.withAlpha(80),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.description_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Terms & Privacy Policy',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 20, indent: 20, endIndent: 20),
+            Expanded(
+              child: ListView(
+                controller: controller,
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                children: [
+                  _TermsSection(
+                    title: '1. Acceptance of Terms',
+                    body:
+                        'By downloading or using the Kigali City Guide app, you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you may not use the app.',
+                    theme: theme,
+                  ),
+                  _TermsSection(
+                    title: '2. Use of the App',
+                    body:
+                        'The Kigali City Guide app is intended to help users discover locations, services, and listings across Kigali, Rwanda. You agree to use the app only for lawful purposes and in a manner that does not infringe the rights of others or restrict or inhibit their use and enjoyment of the app.',
+                    theme: theme,
+                  ),
+                  _TermsSection(
+                    title: '3. User-Generated Content',
+                    body:
+                        'When you create a listing or submit a review, you grant us a non-exclusive, royalty-free licence to display and distribute that content within the app. You are responsible for ensuring that your submissions are accurate, lawful, and do not violate any third-party rights.',
+                    theme: theme,
+                  ),
+                  _TermsSection(
+                    title: '4. Data Collection & Privacy',
+                    body:
+                        'We collect limited personal information, including your email address, display name, and profile photo, to provide app functionality. Your location data is used solely to show nearby listings and provide directions and is never sold to third parties.',
+                    theme: theme,
+                  ),
+                  _TermsSection(
+                    title: '5. Location Services',
+                    body:
+                        'The app may request access to your device location to display your position on the map and calculate directions. You can disable location access at any time in your device settings. Some features may be limited without location permission.',
+                    theme: theme,
+                  ),
+                  _TermsSection(
+                    title: '6. Cookies & Analytics',
+                    body:
+                        'We use Firebase Analytics to understand app usage and improve the experience. No personally identifiable information is shared with advertising networks. You may opt out of analytics collection through your device settings.',
+                    theme: theme,
+                  ),
+                  _TermsSection(
+                    title: '7. Third-Party Services',
+                    body:
+                        'The app integrates with Google Maps, Firebase (Google), and OpenStreetMap services. Your use of these features is also subject to the respective third-party terms of service and privacy policies.',
+                    theme: theme,
+                  ),
+                  _TermsSection(
+                    title: '8. Intellectual Property',
+                    body:
+                        'All original content, design, and code in this app remain the intellectual property of the Kigali City Guide developers. Listings and reviews submitted by users remain the property of their respective authors.',
+                    theme: theme,
+                  ),
+                  _TermsSection(
+                    title: '9. Disclaimer of Warranties',
+                    body:
+                        'The app is provided \'as is\' without warranties of any kind. We do not guarantee the accuracy, completeness, or suitability of any information provided through the app, including listing details, addresses, or directions.',
+                    theme: theme,
+                  ),
+                  _TermsSection(
+                    title: '10. Changes to Terms',
+                    body:
+                        'We reserve the right to modify these terms at any time. Continued use of the app after changes are posted constitutes acceptance of the new terms. We will notify users of significant changes via the app or email.',
+                    theme: theme,
+                  ),
+                  _TermsSection(
+                    title: '11. Contact',
+                    body:
+                        'If you have any questions about these Terms or our Privacy Policy, please contact us through the app settings or reach out to the Kigali City Guide support team.',
+                    theme: theme,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Last updated: March 2026',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TermsSection extends StatelessWidget {
+  final String title;
+  final String body;
+  final ThemeData theme;
+  const _TermsSection({
+    required this.title,
+    required this.body,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(body, style: theme.textTheme.bodyMedium),
+        ],
+      ),
     );
   }
 }

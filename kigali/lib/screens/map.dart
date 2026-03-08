@@ -55,6 +55,12 @@ class _MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
+  // ── Rwanda geographic bounds (used to validate GPS results) ──
+  static bool _isInRwanda(double lat, double lng) {
+    // Rwanda bounding box with a small buffer
+    return lat >= -3.0 && lat <= -1.0 && lng >= 28.8 && lng <= 31.0;
+  }
+
   // ── Location permission & fetch ──
   Future<void> _determinePosition() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -67,7 +73,25 @@ class _MapScreenState extends State<MapScreen> {
     }
     if (permission == LocationPermission.deniedForever) return;
 
-    final position = await Geolocator.getCurrentPosition();
+    final position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    );
+
+    // Ignore emulator / spoofed locations outside Rwanda
+    if (!_isInRwanda(position.latitude, position.longitude)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Live location unavailable — showing Kigali city centre.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
     if (mounted) {
       setState(() {
         _userLocation = LatLng(position.latitude, position.longitude);
@@ -289,7 +313,9 @@ class _MapScreenState extends State<MapScreen> {
           markerId: MarkerId(listing.id ?? listing.name),
           position: LatLng(listing.latitude, listing.longitude),
           icon: BitmapDescriptor.defaultMarkerWithHue(
-            _categoryHue(listing.category),
+            _selectedSubcategory != null
+                ? BitmapDescriptor.hueBlue
+                : _categoryHue(listing.category),
           ),
           infoWindow: InfoWindow(
             title: listing.name,
@@ -306,6 +332,37 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     return markers;
+  }
+
+  // ── Fit camera to all markers matching the active subcategory filter ──
+  void _fitToFilteredMarkers() {
+    final provider = ListingsScope.of(context);
+    final filtered = provider.allListings
+        .where(
+          (l) =>
+              (l.latitude != 0.0 || l.longitude != 0.0) &&
+              l.category == _selectedCategoryFilter &&
+              l.subcategory == _selectedSubcategory,
+        )
+        .toList();
+
+    if (filtered.isEmpty) return;
+
+    if (filtered.length == 1) {
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(filtered.first.latitude, filtered.first.longitude),
+          15.0,
+        ),
+      );
+      return;
+    }
+
+    final points = filtered
+        .map((l) => LatLng(l.latitude, l.longitude))
+        .toList();
+    final bounds = _boundsFromPoints(points);
+    _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 80));
   }
 
   double _categoryHue(String cat) {
@@ -433,13 +490,17 @@ class _MapScreenState extends State<MapScreen> {
                           _selectedSubcategory = sub;
                           _selectedCategoryFilter = cat.listingKey;
                         });
+                        // Zoom the camera to show all matching markers
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) _fitToFilteredMarkers();
+                        });
                       },
                       itemBuilder: (_) => subcats
                           .map(
                             (s) => PopupMenuItem<String>(
                               value: s,
                               child: Text(
-                                s,
+                                l10n.subcategoryLabel(s),
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: cat.color,
@@ -623,7 +684,7 @@ class _DirectionsSheetState extends State<_DirectionsSheet> {
     try {
       final uri = Uri.parse(
         'https://nominatim.openstreetmap.org/search'
-        '?q=\${Uri.encodeComponent(query)}'
+        '?q=${Uri.encodeComponent(query)}'
         '&format=json'
         '&limit=6'
         '&countrycodes=rw',
@@ -660,6 +721,14 @@ class _DirectionsSheetState extends State<_DirectionsSheet> {
       _destController.text = result.name.split(',').first;
     });
     FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  void _clearDestination() {
+    _destController.clear();
+    setState(() {
+      _suggestions = [];
+      _selected = null;
+    });
   }
 
   @override
@@ -753,6 +822,7 @@ class _DirectionsSheetState extends State<_DirectionsSheet> {
                       autofocus: true,
                       decoration: InputDecoration(
                         hintText: l10n.searchDestination,
+                        prefixIcon: const Icon(Icons.search),
                         filled: true,
                         fillColor: theme.colorScheme.surfaceContainerHighest
                             .withAlpha(120),
@@ -775,9 +845,18 @@ class _DirectionsSheetState extends State<_DirectionsSheet> {
                                   ),
                                 ),
                               )
+                            : _destController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: _clearDestination,
+                              )
                             : null,
                       ),
-                      onChanged: _searchDestination,
+                      onChanged: (v) {
+                        setState(() {}); // refresh clear button visibility
+                        _searchDestination(v);
+                      },
+                      onSubmitted: _searchDestination,
                     ),
                   ),
                 ],

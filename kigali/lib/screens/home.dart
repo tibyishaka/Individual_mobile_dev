@@ -71,7 +71,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Text(
                 l10n?.homeDiscover ?? 'Discover Kigali',
                 style: const TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.bold),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -115,11 +117,65 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               }),
             ),
+            const SizedBox(height: 20),
+
+            // ── Tagline section ──
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Everything Kigali, in one place.',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Find hospitals, government offices, restaurants, schools '
+                    'and hidden gems — all across the city. Tap a category to get started.',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      height: 1.5,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
+
+            // ── Section header above buttons ──
+            Row(
+              children: [
+                Icon(
+                  Icons.explore_outlined,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Browse by Category',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.primary,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
             _buildCategoryButton(
               context,
               'Health',
               l10n?.catHealth ?? 'Health',
+              'Hospitals · Clinics · Pharmacies · Polyclinics',
               Icons.local_hospital,
               Colors.red,
             ),
@@ -128,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               'Government',
               l10n?.catGovernment ?? 'Government',
+              'Police Stations · District & Sector Offices · RIB',
               Icons.account_balance,
               Colors.blue,
             ),
@@ -136,6 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               'Entertainment',
               l10n?.catEntertainment ?? 'Entertainment',
+              'Restaurants · Hotels · Cafés · Cinemas · Nightlife',
               Icons.movie,
               Colors.purple,
             ),
@@ -144,6 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               'Education',
               l10n?.catEducation ?? 'Education',
+              'Schools · Universities · Libraries · Training Centers',
               Icons.school,
               Colors.orange,
             ),
@@ -152,6 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               'Tourist Attraction',
               l10n?.catTourist ?? 'Tourist Attraction',
+              'Museums · Parks · Genocide Memorials · Cultural Sites',
               Icons.tour,
               Colors.green,
             ),
@@ -165,23 +225,16 @@ class _HomeScreenState extends State<HomeScreen> {
     BuildContext context,
     String categoryKey,
     String label,
+    String subtitle,
     IconData icon,
     Color color,
   ) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton.icon(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        icon: Icon(icon),
-        label: Text(label, style: const TextStyle(fontSize: 18)),
-        onPressed: () {
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -189,6 +242,41 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 28),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(200),
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white, size: 22),
+            ],
+          ),
+        ),
       ),
     );
   }
