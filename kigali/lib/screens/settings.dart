@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -193,9 +192,11 @@ class _ProfileCardState extends State<_ProfileCard> {
       final ref = FirebaseStorage.instance.ref().child(
         'user_photos/${user.uid}.jpg',
       );
-      await ref.putFile(File(picked.path));
+      final bytes = await picked.readAsBytes();
+      await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
       final url = await ref.getDownloadURL();
       await user.updatePhotoURL(url);
+      await FirebaseAuth.instance.currentUser?.reload();
       if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
