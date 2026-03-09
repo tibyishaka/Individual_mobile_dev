@@ -24,7 +24,7 @@ A Flutter-based city directory and guide application for Kigali, Rwanda. Users c
 - One-tap phone call via `tel:` URI
 - External Google Maps directions
 - Inline lite-mode mini-map showing the listing's pin
-- Real-time **reviews** with star ratings (one review per user enforced)
+- Real-time **reviews** with star ratings (average rating displayed; duplicate-review prevention logic exists in the provider but is not yet enforced in the UI)
 
 ### Listing Management
 - Create or edit listings with: Name, Category, Subcategory, Address, Contact Number, Description, and Photo
@@ -196,6 +196,10 @@ users/                            ← user profiles
     email         String
     createdAt     Timestamp
     fcmToken      String
+
+Firebase Storage paths:
+  listings/{listingId}.jpg          ← listing photos
+  user_photos/{uid}.jpg             ← profile photos (set via Firebase Auth photoURL)
 ```
 
 ---
