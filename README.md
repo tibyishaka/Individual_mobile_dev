@@ -2,6 +2,16 @@
 
 A Flutter-based city directory and guide application for Kigali, Rwanda. Users can discover, browse, and add local listings across five key categories, view them on an interactive map, get driving directions, read and write reviews, and manage their own submissions all in six languages.
 
+## Screenshots
+
+| Login | Register | Home |
+|-------|----------|------|
+| ![Login Screen](images/login_screen.png) | ![Register Screen](images/register_screen.png) | ![Home Screen](images/home_screen.png) |
+
+| Listings | Map | Settings |
+|----------|-----|----------|
+| ![Listing Screen](images/listing_screen.png) | ![Map Screen](images/map_screen.png) | ![Settings Screen](images/setting_screen.png) |
+
 ## Features
 
 ### Directory & Listings
